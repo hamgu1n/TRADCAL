@@ -8,9 +8,9 @@ rem  Chrome kiosk mode. Double-click this file, or point a
 rem  Windows Task Scheduler "Run at startup" task at it.
 rem
 rem  Requirements on this machine:
-rem   - Node.js installed (https://nodejs.org)
 rem   - Google Chrome installed
 rem   - .env already configured in this folder (see .env.example)
+rem  Node.js is installed automatically (via winget) if it's missing.
 rem ============================================================
 
 rem Run from the folder this script lives in, regardless of how it's
@@ -19,10 +19,33 @@ cd /d "%~dp0"
 
 where node >nul 2>nul
 if errorlevel 1 (
-    echo [ERROR] Node.js was not found on this computer.
-    echo Install it from https://nodejs.org, then run this script again.
+    echo Node.js was not found on this computer. Attempting to install it...
+
+    where winget >nul 2>nul
+    if errorlevel 1 (
+        echo [ERROR] winget isn't available on this computer, so Node.js
+        echo can't be installed automatically ^(winget ships with Windows 10
+        echo 1809+ and Windows 11 — this machine may need a Windows update^).
+        echo Install Node.js yourself from https://nodejs.org, then run this
+        echo script again.
+        pause
+        exit /b 1
+    )
+
+    winget install --id OpenJS.NodeJS.LTS -e --accept-source-agreements --accept-package-agreements
+    if errorlevel 1 (
+        echo [ERROR] Node.js installation via winget failed. Install it
+        echo manually from https://nodejs.org, then run this script again.
+        pause
+        exit /b 1
+    )
+
+    echo.
+    echo Node.js is installed. This window's PATH won't see it until a new
+    echo session starts, so please close this window and run the script
+    echo again to continue.
     pause
-    exit /b 1
+    exit /b 0
 )
 
 if not exist "node_modules" (
