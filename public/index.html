@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Technician Appointment Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="mountains" aria-hidden="true"></div>
+
+  <header>
+    <div class="wordmark">
+      <div class="shield-chip">
+        <img src="images/roanoke-shield.png" alt="Roanoke College" class="shield" />
+      </div>
+      <div class="wordmark-text">
+        <div class="wordmark-eyebrow">Roanoke College</div>
+        <h1>IT Technician Board <span id="mock-badge" class="badge hidden">DEMO DATA</span></h1>
+      </div>
+    </div>
+    <div class="header-right">
+      <div id="last-updated"></div>
+      <div id="clock"></div>
+    </div>
+  </header>
+
+  <div id="stale-banner" class="hidden"></div>
+  <div id="alarm-banner" class="hidden">
+    <div class="alarm-banner-content">
+      <div id="alarm-banner-title"></div>
+      <div id="alarm-banner-details"></div>
+    </div>
+    <button type="button" id="alarm-dismiss">Dismiss</button>
+  </div>
+
+  <div id="filter-bar">
+    <div class="bar-section" id="filter-section">
+      <span class="bar-section-label">Filters</span>
+      <div class="checkbox-dropdown" id="status-dropdown">
+        <button type="button" class="dropdown-toggle" id="status-dropdown-toggle">Status: All ▾</button>
+        <div class="dropdown-panel hidden" id="status-dropdown-panel"></div>
+      </div>
+      <label>
+        Users:
+        <select id="person-filter"><option value="all">All</option></select>
+      </label>
+      <label>
+        Technician:
+        <select id="technician-filter"><option value="all">All</option></select>
+      </label>
+      <label>
+        <input type="search" id="search-input" placeholder="Search title or location…" />
+      </label>
+    </div>
+
+    <div class="bar-divider" aria-hidden="true"></div>
+
+    <div class="bar-section" id="settings-section">
+      <span class="bar-section-label">Settings</span>
+      <button type="button" class="dropdown-toggle icon-toggle" id="settings-toggle" aria-label="Settings">⚙</button>
+    </div>
+  </div>
+
+  <div id="settings-overlay" class="hidden">
+    <div id="settings-modal">
+      <div id="settings-header">
+        <h2>Settings</h2>
+        <button type="button" id="settings-close" aria-label="Close">✕</button>
+      </div>
+      <div id="settings-panel">
+        <div class="dropdown-section-label">Appearance</div>
+        <button type="button" id="theme-toggle" class="settings-row"></button>
+
+        <div class="dropdown-section-label">Display options</div>
+        <label class="dropdown-option">
+          <input type="checkbox" id="show-completed" />
+          Show completed
+        </label>
+        <label class="dropdown-option">
+          <input type="checkbox" id="show-overdue" checked />
+          Show past-due (not completed)
+        </label>
+        <label class="dropdown-option">
+          <input type="checkbox" id="show-date" />
+          Show date column
+        </label>
+        <label class="dropdown-option">
+          <input type="checkbox" id="show-future" />
+          Show future appointments
+        </label>
+
+        <div class="dropdown-section-label">Actions</div>
+        <button type="button" id="refresh-now" class="settings-row">🔄 Refresh now</button>
+        <button type="button" id="test-alarm" class="settings-row">🔊 Test alarm sound</button>
+        <button type="button" id="test-ping" class="settings-row">🔔 Test ping sound</button>
+        <button type="button" id="test-new-appointment" class="settings-row">🆕 Test new appointment message</button>
+        <button type="button" id="open-history" class="settings-row">🗂 View appointment history</button>
+
+        <div class="dropdown-section-label">Technicians</div>
+        <div id="technician-manager">
+          <div class="technician-add-row">
+            <input type="text" id="technician-email-input" placeholder="First name (matches the Outlook category)" />
+            <button type="button" id="technician-add-btn">Add</button>
+          </div>
+          <ul id="technician-list"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <main>
+    <table id="appointments" class="hide-date-column">
+      <thead>
+        <tr>
+          <th class="date-column"><span class="date-text">Date</span></th>
+          <th class="next-indicator-column"></th>
+          <th class="time-column">Time</th>
+          <th>Title</th>
+          <th>Location</th>
+          <th>Person</th>
+          <th class="technician-column">Technician</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="appointments-body"></tbody>
+    </table>
+    <div id="empty-state" class="hidden">No appointments to show.</div>
+  </main>
+
+  <div id="history-overlay" class="hidden">
+    <div id="history-modal">
+      <div id="history-header">
+        <h2>Appointment History</h2>
+        <button type="button" id="history-close" aria-label="Close">✕</button>
+      </div>
+      <p class="history-subtitle">Appointments archived after aging off the live board. Kept for 30 days.</p>
+      <div id="history-body"></div>
+    </div>
+  </div>
+
+  <audio id="alarm-sound" src="alarm.mp3" preload="auto"></audio>
+  <audio id="ping-sound" src="ping.mp3" preload="auto"></audio>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

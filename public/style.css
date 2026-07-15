@@ -1,0 +1,847 @@
+/* Roanoke College brand palette (per Brand FAQ, April 2023):
+   Roanoke Maroon #872046, Mandarin Yellow #F0B52B, National Blue #001B74.
+   Display type stands in for the brand's licensed Henderson Sans/LTC Goudy
+   Oldstyle Pro (Playfair Display for the serif wordmark, Inter for
+   everything else) since those licensed fonts aren't available here. */
+:root {
+  --maroon: #872046;
+  --maroon-dark: #5c1630;
+  --maroon-darker: #3a0f1f;
+  --yellow: #f0b52b;
+  --blue: #001b74;
+
+  --bg: #170a10;
+  --panel: #2a1220;
+  --border: #4a2236;
+  --text: #f8ede9;
+  --text-muted: #d8b8c4;
+  --table-header-color: var(--yellow);
+  --eyebrow-color: var(--yellow);
+
+  --overdue-bg: #4a1a0c;
+  --overdue-border: #fb923c;
+  --ongoing-bg: #4a3a10;
+  --ongoing-border: var(--yellow);
+  --next-bg: #241540;
+  --next-border: #8b7ad1;
+  --next-marker: #a99ae0;
+
+  --status-default-bg: #3a2230;
+  --status-default-color: #ecdce3;
+  --status-gray-bg: #3a3d4a;
+  --status-gray-color: #d8dae3;
+  --status-green-bg: #14532d;
+  --status-green-color: #86efac;
+  --status-yellow-bg: #6b4a0d;
+  --status-yellow-color: var(--yellow);
+  --status-red-bg: #7a1f1f;
+  --status-red-color: #fca5a5;
+  --status-pink-bg: var(--maroon);
+  --status-pink-color: #f7c9dd;
+}
+
+:root[data-theme='light'] {
+  --bg: #fdf6f2;
+  --panel: #ffffff;
+  --border: #ecd7de;
+  --text: #2a1220;
+  --text-muted: #7a4a5a;
+  --table-header-color: var(--maroon);
+  --eyebrow-color: var(--maroon);
+
+  --overdue-bg: #fde3d0;
+  --overdue-border: #d9642a;
+  --ongoing-bg: #fdf0c8;
+  --ongoing-border: #b3800a;
+  --next-bg: #e9e3fb;
+  --next-border: #6a54c9;
+  --next-marker: #5b46b8;
+
+  --status-default-bg: #f1e2e9;
+  --status-default-color: #5c1630;
+  --status-gray-bg: #e2e4ea;
+  --status-gray-color: #43485a;
+  --status-green-bg: #d9f2e1;
+  --status-green-color: #146c37;
+  --status-yellow-bg: #fdf0c8;
+  --status-yellow-color: #7a5606;
+  --status-red-bg: #fbdada;
+  --status-red-color: #9c1c1c;
+  --status-pink-bg: #f7dce8;
+  --status-pink-color: var(--maroon);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  transition: background 0.2s, color 0.2s;
+}
+
+/* Decorative nod to the brand's "Blue Ridge Mountains" ridge-line motif from
+   the cover of the Brand FAQ, rendered as flat CSS shapes rather than the
+   original illustration. */
+.mountains {
+  height: 14px;
+  background: linear-gradient(90deg, var(--maroon) 0%, var(--maroon-dark) 50%, var(--maroon-darker) 100%);
+  clip-path: polygon(
+    0% 100%, 0% 40%, 8% 55%, 16% 20%, 24% 45%, 32% 10%, 40% 40%,
+    48% 60%, 56% 25%, 64% 50%, 72% 15%, 80% 45%, 88% 30%, 96% 55%, 100% 20%,
+    100% 100%
+  );
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 3rem;
+  background: var(--panel);
+  border-bottom: 3px solid var(--maroon);
+}
+
+.wordmark {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.shield-chip {
+  background: #fdf6f2;
+  border-radius: 0.75rem;
+  padding: 0.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+.shield {
+  height: 3.25rem;
+  width: auto;
+  display: block;
+}
+
+.wordmark-eyebrow {
+  font-family: 'Inter', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--eyebrow-color);
+}
+
+header h1 {
+  margin: 0;
+  font-family: 'Playfair Display', serif;
+  font-weight: 900;
+  font-size: 2.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: var(--text);
+}
+
+.header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.4rem;
+}
+
+#theme-toggle {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 0.35rem 0.8rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+}
+
+#theme-toggle:hover {
+  border-color: var(--maroon);
+}
+
+#last-updated {
+  font-size: 1rem;
+  color: var(--text-muted);
+}
+
+#clock {
+  font-size: 2rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.badge {
+  font-size: 1rem;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  background: var(--blue);
+  color: #cdd6f7;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.badge.hidden {
+  display: none;
+}
+
+#alarm-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  padding: 1.5rem 2rem;
+  background: var(--yellow);
+  color: var(--maroon-darker);
+  font-family: 'Inter', sans-serif;
+  transition: background 0.3s;
+}
+
+#alarm-banner.hidden {
+  display: none;
+}
+
+.alarm-banner-content {
+  text-align: center;
+}
+
+#alarm-banner-title {
+  font-size: 3rem;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+#alarm-banner-details {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-top: 0.35rem;
+  opacity: 0.85;
+}
+
+#alarm-dismiss {
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-family: 'Inter', sans-serif;
+  padding: 0.5rem 1.25rem;
+  border-radius: 0.5rem;
+  border: 2px solid var(--maroon-darker);
+  background: transparent;
+  color: var(--maroon-darker);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+#alarm-dismiss.hidden {
+  display: none;
+}
+
+#alarm-dismiss:hover {
+  background: var(--maroon-darker);
+  color: var(--yellow);
+}
+
+#stale-banner {
+  font-size: 1.25rem;
+  text-align: center;
+  padding: 0.75rem;
+  background: var(--maroon-dark);
+  color: var(--yellow);
+  font-weight: 600;
+}
+
+#stale-banner.hidden {
+  display: none;
+}
+
+#filter-bar {
+  display: flex;
+  align-items: center;
+  padding: 1rem 3rem;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  font-size: 1.1rem;
+  position: relative;
+}
+
+.bar-section {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+#filter-section {
+  flex: 1;
+}
+
+.bar-section-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-right: 0.25rem;
+}
+
+.bar-divider {
+  width: 1px;
+  align-self: stretch;
+  background: var(--border);
+  margin: 0 2rem;
+}
+
+#filter-bar label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+#filter-bar select {
+  font-size: 1.1rem;
+  padding: 0.3rem 0.5rem;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+}
+
+#search-input {
+  font-size: 1.4rem;
+  padding: 0.35rem 1rem;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  width: 32rem;
+}
+
+#search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.dropdown-toggle.icon-toggle {
+  font-size: 1.8rem;
+  line-height: 1;
+  padding: 0.3rem 0.7rem;
+}
+
+
+.dropdown-section-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 0.5rem 0.5rem 0.25rem;
+}
+
+.settings-row {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-family: 'Inter', sans-serif;
+  font-size: 1rem;
+  padding: 0.5rem;
+  margin-bottom: 0.25rem;
+  border-radius: 0.35rem;
+  border: none;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.settings-row:hover {
+  background: var(--bg);
+}
+
+#technician-manager {
+  padding: 0 0.5rem 0.5rem;
+}
+
+.technician-add-row {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.technician-add-row input {
+  flex: 1;
+  min-width: 0;
+  font-size: 1.1rem;
+  padding: 0.5rem 0.65rem;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 0.35rem;
+}
+
+.technician-add-row button {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  padding: 0.5rem 1rem;
+  border-radius: 0.35rem;
+  border: 1px solid var(--maroon);
+  background: var(--maroon);
+  color: #fff;
+  cursor: pointer;
+}
+
+#technician-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 10rem;
+  overflow-y: auto;
+}
+
+.technician-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.5rem;
+  font-size: 1.1rem;
+  border-radius: 0.3rem;
+}
+
+.technician-item:hover {
+  background: var(--bg);
+}
+
+.technician-remove {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 1.1rem;
+  padding: 0.1rem 0.5rem;
+}
+
+.technician-remove:hover {
+  color: var(--maroon);
+}
+
+.checkbox-dropdown {
+  position: relative;
+}
+
+.dropdown-toggle {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.1rem;
+  padding: 0.35rem 0.75rem;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+  cursor: pointer;
+}
+
+.dropdown-toggle:hover {
+  border-color: var(--maroon);
+}
+
+.dropdown-panel {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  z-index: 10;
+  min-width: 12rem;
+  max-height: 16rem;
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.dropdown-panel.hidden {
+  display: none;
+}
+
+.dropdown-option {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 0.35rem;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.dropdown-option:hover {
+  background: var(--bg);
+}
+
+.dropdown-option input {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--yellow);
+}
+
+main {
+  padding: 2rem 3rem;
+}
+
+#empty-state {
+  padding: 3rem;
+  text-align: center;
+  font-size: 1.5rem;
+  color: var(--text-muted);
+}
+
+#empty-state.hidden {
+  display: none;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 2rem;
+}
+
+/* Only the date text hides when the date column is toggled off — the cell
+   itself stays in the layout so the next-upcoming ▶ marker (below) always
+   has a home in the date column, instead of disappearing along with it. */
+table.hide-date-column .date-text {
+  display: none;
+}
+
+.date-column {
+  min-width: 7rem;
+  white-space: nowrap;
+}
+
+.time-column {
+  text-align: center;
+}
+
+.technician-column {
+  text-align: left;
+  padding-left: 0;
+}
+
+.technician-text {
+  display: inline-block;
+  margin-left: -1.5rem;
+}
+
+thead th {
+  text-align: left;
+  padding: 1rem;
+  border-bottom: 2px solid var(--maroon);
+  color: var(--table-header-color);
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+tbody td {
+  padding: 1.25rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+tbody tr.past {
+  opacity: 0.45;
+}
+
+tbody tr.day-divider td {
+  padding: 0.5rem 1rem;
+  border-bottom: none;
+}
+
+tbody tr.day-divider span {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+tbody tr.day-divider span::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--maroon);
+}
+
+tbody tr.future-divider span {
+  color: var(--next-marker);
+}
+
+tbody tr.future-divider span::after {
+  background: var(--next-border);
+}
+
+tbody tr.overdue {
+  background: var(--overdue-bg);
+  box-shadow: inset 4px 0 0 var(--overdue-border);
+}
+
+tbody tr.ongoing {
+  background: var(--ongoing-bg);
+  box-shadow: inset 4px 0 0 var(--ongoing-border);
+}
+
+tbody tr.next-upcoming {
+  background: var(--next-bg);
+  box-shadow: inset 4px 0 0 var(--next-border);
+  animation: next-upcoming-row-flash 1.4s ease-in-out infinite;
+}
+
+/* Pulses brightness rather than swapping to the full accent color, since a
+   flat color swap risks poor text contrast in dark mode (light text on a
+   bright accent background) — scaling brightness keeps text and background
+   moving together, so contrast stays roughly constant throughout. */
+@keyframes next-upcoming-row-flash {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.4);
+  }
+}
+
+.next-indicator-column {
+  width: 2rem;
+  text-align: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.next-indicator {
+  display: inline-block;
+  color: var(--next-marker);
+  animation: next-indicator-blink 1.4s step-start infinite;
+}
+
+@keyframes next-indicator-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+
+.status-badge {
+  display: inline-block;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  background: var(--status-default-bg);
+  color: var(--status-default-color);
+}
+
+/* Shape/icon markers alongside color, so status isn't conveyed by hue
+   alone (helps colorblind viewers distinguish the five statuses). */
+.status-badge.status-gray::before {
+  content: '○ ';
+}
+
+.status-badge.status-green::before {
+  content: '✓ ';
+}
+
+.status-badge.status-yellow::before {
+  content: '◐ ';
+}
+
+.status-badge.status-red::before {
+  content: '⚠ ';
+}
+
+.status-badge.status-pink::before {
+  content: '◆ ';
+}
+
+.status-badge.status-gray {
+  background: var(--status-gray-bg);
+  color: var(--status-gray-color);
+}
+
+.status-badge.status-green {
+  background: var(--status-green-bg);
+  color: var(--status-green-color);
+}
+
+.status-badge.status-yellow {
+  background: var(--status-yellow-bg);
+  color: var(--status-yellow-color);
+}
+
+.status-badge.status-red {
+  background: var(--status-red-bg);
+  color: var(--status-red-color);
+}
+
+.status-badge.status-pink {
+  background: var(--status-pink-bg);
+  color: var(--status-pink-color);
+}
+
+#history-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#history-overlay.hidden {
+  display: none;
+}
+
+#history-modal {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1.5rem 2rem;
+  width: min(90vw, 60rem);
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+#history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+#history-header h2 {
+  margin: 0;
+  font-family: 'Playfair Display', serif;
+  color: var(--text);
+}
+
+#history-close {
+  font-size: 1.25rem;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+}
+
+#history-close:hover {
+  color: var(--maroon);
+}
+
+.history-subtitle {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  margin-top: 0.25rem;
+}
+
+#history-body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 1rem;
+  margin-top: 1rem;
+}
+
+#history-body th {
+  text-align: left;
+  padding: 0.6rem;
+  border-bottom: 2px solid var(--maroon);
+  color: var(--table-header-color);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+}
+
+#history-body td {
+  padding: 0.6rem;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Settings modal — a focused overlay (same pattern as the history viewer)
+   rather than a small anchored dropdown, so its content reads more easily. */
+#settings-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#settings-overlay.hidden {
+  display: none;
+}
+
+#settings-modal {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 2rem 2.5rem;
+  width: min(90vw, 34rem);
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+#settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+#settings-header h2 {
+  margin: 0;
+  font-family: 'Playfair Display', serif;
+  font-size: 1.75rem;
+  color: var(--text);
+}
+
+#settings-close {
+  font-size: 1.5rem;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+}
+
+#settings-close:hover {
+  color: var(--maroon);
+}
+
+/* Scoped so the status filter's small dropdown (which shares these same
+   base classes) isn't affected — only content inside the settings modal
+   gets the larger, more readable sizing. */
+#settings-panel .dropdown-section-label {
+  font-size: 0.95rem;
+  padding-top: 1rem;
+}
+
+#settings-panel .settings-row,
+#settings-panel .dropdown-option {
+  font-size: 1.2rem;
+  padding: 0.65rem 0.5rem;
+}
+
+#settings-panel .dropdown-option input {
+  width: 1.3rem;
+  height: 1.3rem;
+}

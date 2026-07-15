@@ -1,0 +1,11 @@
+node_modules/
+.env
+appointments-archive.csv
+technicians.csv
+.DS_Store
+
+# Source copies of assets already in public/ — the app serves the public/
+# copies, these root-level ones are just where they were originally dropped.
+/Alarm.mp3
+/Ping.mp3
+/Roanoke College Shield.png
