@@ -51,6 +51,11 @@ const technicianListEl = document.getElementById('technician-list');
 let currentAlarmKey = null;
 let dismissedAlarmKey = null;
 let testAlarmActive = false;
+// The set of event IDs currently passing the active filters (search, status,
+// person/technician, show-completed/overdue/future) — kept in sync every
+// time the table re-renders, so alarms only fire for appointments actually
+// visible on the board right now, not ones hidden by a filter.
+let displayedEventIds = new Set();
 // Technician roster (managed in Settings, persisted server-side). Declared
 // here rather than down near the roster UI code so it's already defined by
 // the time earlier-in-file code (e.g. the show-future toggle init) calls
@@ -223,6 +228,9 @@ function renderEvents(events) {
     showFuture: showFutureEl.checked,
     searchText: searchInputEl.value,
   });
+
+  displayedEventIds = new Set(filtered.map((e) => e.id));
+  renderAlarms(latestSnapshot.alarms);
 
   bodyEl.innerHTML = '';
 
@@ -404,11 +412,27 @@ function fillBannerContent(alarm) {
   }
 }
 
-function renderAlarms(alarms) {
+// Only alarm for appointments that are actually visible on the board right
+// now (respecting search/status/person/technician filters) and never for
+// ones marked completed — regardless of whether "Show completed" happens to
+// be on, a finished appointment should never trigger an alert.
+function eligibleAlarms(alarms) {
+  return alarms.filter((alarm) => {
+    if (!displayedEventIds.has(alarm.eventId)) return false;
+    const event = latestSnapshot.events.find((e) => e.id === alarm.eventId);
+    if (!event) return false;
+    const { status } = getStatusAndTechnician(event.categories, technicians);
+    return !isCompletedStatus(status);
+  });
+}
+
+function renderAlarms(rawAlarms) {
   // A manually-triggered test alarm takes precedence until dismissed —
   // otherwise the next real snapshot (every ~20s) would immediately hide
   // the test banner just because there's no real alarm active right now.
   if (testAlarmActive) return;
+
+  const alarms = eligibleAlarms(rawAlarms);
 
   if (alarms.length === 0) {
     bannerEl.classList.add('hidden');
@@ -654,8 +678,10 @@ function escapeHtml(str) {
 }
 
 function renderAll() {
+  // renderEvents() calls renderAlarms() itself once it knows which events
+  // are actually displayed (alarms are gated to those) — no separate call
+  // needed here.
   renderEvents(latestSnapshot.events);
-  renderAlarms(latestSnapshot.alarms);
   renderMockBadge(latestSnapshot.mockMode);
   updateStaleBanner();
 }
