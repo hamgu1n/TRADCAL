@@ -123,9 +123,15 @@ function updateStatusDropdownToggleLabel(totalStatuses) {
 
 function populateStatusDropdown(statuses) {
   // Drop exclusions for statuses that no longer appear in the data, so a
-  // status that comes back later starts out visible again.
-  for (const excluded of [...excludedStatuses]) {
-    if (!statuses.includes(excluded)) excludedStatuses.delete(excluded);
+  // status that comes back later starts out visible again. Skipped while
+  // `statuses` is empty — renderEvents() runs once with no events at all
+  // before the first real SSE snapshot arrives, and treating that as "none
+  // of these statuses exist anymore" would wipe out exclusions restored
+  // from localStorage before real data ever had a chance to load.
+  if (statuses.length > 0) {
+    for (const excluded of [...excludedStatuses]) {
+      if (!statuses.includes(excluded)) excludedStatuses.delete(excluded);
+    }
   }
 
   statusDropdownPanelEl.innerHTML = '';
