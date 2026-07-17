@@ -305,7 +305,7 @@ function renderEvents(events) {
 
   displayedEventIds = new Set(filtered.map((e) => e.id));
   renderAlarms(latestSnapshot.alarms);
-  updateIndicatorBadges();
+  updateIndicatorBadges(filtered);
 
   bodyEl.innerHTML = '';
 
@@ -731,7 +731,14 @@ function renderMockBadge(mockMode) {
 // off and showFuture off are the app's own shipped defaults, not something a
 // user did to narrow the view, so they don't trigger the badge.
 
-function updateIndicatorBadges() {
+const MUTE_BADGE_DEFAULT_TEXT = muteBadgeEl.textContent;
+const MUTE_BADGE_DEFAULT_TITLE = muteBadgeEl.title;
+
+// `displayedEvents` is the post-filter list actually on the board right now
+// (renderEvents() passes its `filtered` array) — a status that's muted but
+// currently hidden by the visibility checkbox isn't worth warning about,
+// since nothing muted is actually on screen to be missed.
+function updateIndicatorBadges(displayedEvents) {
   const filtering =
     excludedStatuses.size > 0 ||
     personFilterEl.value !== 'all' ||
@@ -740,7 +747,23 @@ function updateIndicatorBadges() {
     !showOverdueEl.checked;
   filterBadgeEl.classList.toggle('hidden', !filtering);
 
-  muteBadgeEl.classList.toggle('hidden', notificationDisabledStatuses.size === 0);
+  const mutedVisibleStatuses = [
+    ...new Set(
+      displayedEvents
+        .map((e) => getStatusAndTechnician(e.categories, technicians).status)
+        .filter((status) => notificationDisabledStatuses.has(status))
+    ),
+  ];
+
+  muteBadgeEl.classList.toggle('hidden', mutedVisibleStatuses.length === 0);
+  if (mutedVisibleStatuses.length > 0) {
+    const names = mutedVisibleStatuses.join(', ');
+    muteBadgeEl.textContent = `🔕 Alerts muted: ${names}`;
+    muteBadgeEl.title = `Alarms are muted for: ${names} — open Settings to review`;
+  } else {
+    muteBadgeEl.textContent = MUTE_BADGE_DEFAULT_TEXT;
+    muteBadgeEl.title = MUTE_BADGE_DEFAULT_TITLE;
+  }
 }
 
 for (const badge of [filterBadgeEl, muteBadgeEl]) {
