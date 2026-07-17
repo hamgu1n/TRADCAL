@@ -73,8 +73,11 @@ let latestSnapshot = {
 
 // Statuses the user has unchecked in the status filter dropdown. A status
 // not in this set is considered "shown" — so newly-seen statuses default to
-// visible without the user having to opt in each one individually.
-const excludedStatuses = new Set();
+// visible without the user having to opt in each one individually. Restored
+// from localStorage so a filter choice survives a page refresh (this board
+// runs unattended and reloads itself every few minutes — see
+// AUTO_RELOAD_INTERVAL_MS below).
+const excludedStatuses = new Set(JSON.parse(localStorage.getItem('tradcal-excluded-statuses') ?? '[]'));
 
 // --- Theme ---
 
@@ -136,6 +139,7 @@ function populateStatusDropdown(statuses) {
     checkbox.addEventListener('change', () => {
       if (checkbox.checked) excludedStatuses.delete(status);
       else excludedStatuses.add(status);
+      localStorage.setItem('tradcal-excluded-statuses', JSON.stringify([...excludedStatuses]));
       renderEvents(latestSnapshot.events);
     });
 
@@ -202,6 +206,13 @@ function populateFilterOptions(selectEl, values) {
   selectEl.value = options.includes(previousValue) ? previousValue : 'all';
 }
 
+// The person dropdown's options are derived from whoever's on the calendar
+// right now, so a saved filter value can only be applied once those options
+// exist — this flag makes that restore happen exactly once, on the first
+// render after page load, rather than fighting the user's live selection on
+// every subsequent render.
+let personFilterRestored = false;
+
 function updateFilterOptions(events) {
   const statuses = [
     ...new Set(events.map((e) => getStatusAndTechnician(e.categories, technicians).status).filter(Boolean)),
@@ -209,6 +220,14 @@ function updateFilterOptions(events) {
   const persons = [...new Set(events.map((e) => displayPerson(e.person)).filter((p) => p && p !== '-'))].sort();
   populateStatusDropdown(statuses);
   populateFilterOptions(personFilterEl, persons);
+
+  if (!personFilterRestored) {
+    personFilterRestored = true;
+    const saved = localStorage.getItem('tradcal-person-filter');
+    if (saved && [...personFilterEl.options].some((o) => o.value === saved)) {
+      personFilterEl.value = saved;
+    }
+  }
 }
 
 // --- Appointment table rendering ---
@@ -686,10 +705,34 @@ function renderAll() {
   updateStaleBanner();
 }
 
-for (const control of [personFilterEl, showCompletedEl, showOverdueEl]) {
-  control.addEventListener('change', () => renderEvents(latestSnapshot.events));
+personFilterEl.addEventListener('change', () => {
+  localStorage.setItem('tradcal-person-filter', personFilterEl.value);
+  renderEvents(latestSnapshot.events);
+});
+
+function applyShowCompleted(shouldShow) {
+  showCompletedEl.checked = shouldShow;
+  localStorage.setItem('tradcal-show-completed', String(shouldShow));
+  renderEvents(latestSnapshot.events);
 }
-searchInputEl.addEventListener('input', () => renderEvents(latestSnapshot.events));
+applyShowCompleted(localStorage.getItem('tradcal-show-completed') === 'true');
+showCompletedEl.addEventListener('change', () => applyShowCompleted(showCompletedEl.checked));
+
+function applyShowOverdue(shouldShow) {
+  showOverdueEl.checked = shouldShow;
+  localStorage.setItem('tradcal-show-overdue', String(shouldShow));
+  renderEvents(latestSnapshot.events);
+}
+// Defaults to checked (matches the HTML default) when nothing's been saved yet.
+const storedShowOverdue = localStorage.getItem('tradcal-show-overdue');
+applyShowOverdue(storedShowOverdue === null ? true : storedShowOverdue === 'true');
+showOverdueEl.addEventListener('change', () => applyShowOverdue(showOverdueEl.checked));
+
+searchInputEl.value = localStorage.getItem('tradcal-search-text') ?? '';
+searchInputEl.addEventListener('input', () => {
+  localStorage.setItem('tradcal-search-text', searchInputEl.value);
+  renderEvents(latestSnapshot.events);
+});
 
 // --- Date column toggle (persisted) ---
 
@@ -760,6 +803,12 @@ async function loadTechnicians() {
   renderEvents(latestSnapshot.events);
 }
 
+// Restored from localStorage on the first populate (once the roster has
+// loaded) — like personFilterRestored above, this shouldn't fight the
+// user's live selection on later calls (e.g. after adding/removing a
+// technician in Settings).
+let technicianFilterRestored = false;
+
 function populateTechnicianDropdown() {
   const previousValue = technicianFilterEl.value || 'all';
   technicianFilterEl.innerHTML = '<option value="all">All</option>';
@@ -770,6 +819,14 @@ function populateTechnicianDropdown() {
     technicianFilterEl.appendChild(option);
   }
   technicianFilterEl.value = ['all', ...technicians].includes(previousValue) ? previousValue : 'all';
+
+  if (!technicianFilterRestored) {
+    technicianFilterRestored = true;
+    const saved = localStorage.getItem('tradcal-technician-filter');
+    if (saved && ['all', ...technicians].includes(saved)) {
+      technicianFilterEl.value = saved;
+    }
+  }
 }
 
 function renderTechnicianList() {
@@ -819,7 +876,10 @@ technicianEmailInputEl.addEventListener('keydown', (event) => {
     addTechnician();
   }
 });
-technicianFilterEl.addEventListener('change', () => renderEvents(latestSnapshot.events));
+technicianFilterEl.addEventListener('change', () => {
+  localStorage.setItem('tradcal-technician-filter', technicianFilterEl.value);
+  renderEvents(latestSnapshot.events);
+});
 
 loadTechnicians();
 

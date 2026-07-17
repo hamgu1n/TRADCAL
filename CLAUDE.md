@@ -60,6 +60,15 @@ before each appointment starts.
     default even though the server fetches much further ahead — Settings →
     "Show future appointments" removes that cutoff to reveal the rest of the
     fetched window.
+  - Theme, all filters (status, person, technician, search text, show
+    completed/overdue/date/future), and appointments-per-page-style display
+    toggles are persisted to `localStorage` (`tradcal-*` keys) so they
+    survive both the board's own `AUTO_RELOAD_INTERVAL_MS` self-refresh and a
+    manual page reload — this runs unattended, so someone shouldn't have to
+    re-apply a filter every few minutes. The person/technician dropdowns
+    restore their saved value once, on the first render after their options
+    load (`personFilterRestored`/`technicianFilterRestored`), so a saved
+    choice doesn't fight a live selection change afterward.
   - Requests a Screen Wake Lock on load (re-requested on visibility change)
     since this runs unattended on a shared monitor and should never sleep.
   - The alarm banner has a **Dismiss** button; until dismissed, the sound
