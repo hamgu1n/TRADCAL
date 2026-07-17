@@ -104,9 +104,23 @@ async function pollGraph() {
 }
 
 // Re-check alarm thresholds every 20s independent of the Graph poll interval,
-// since alarms are minute-sensitive but Graph polling can be slower.
-setInterval(broadcastSnapshot, 20_000);
-setInterval(pollGraph, POLL_INTERVAL_SECONDS * 1000);
+// since alarms are minute-sensitive but Graph polling can be slower. Driven
+// off a single timer (rather than a separate setInterval per concern) so a
+// poll tick and a recheck tick can never land close together and broadcast
+// two SSE frames back to back for what's logically one update.
+const RECHECK_INTERVAL_SECONDS = 20;
+let secondsSinceLastPoll = 0;
+
+setInterval(async () => {
+  secondsSinceLastPoll += RECHECK_INTERVAL_SECONDS;
+  if (secondsSinceLastPoll >= POLL_INTERVAL_SECONDS) {
+    secondsSinceLastPoll = 0;
+    await pollGraph(); // pollGraph() broadcasts once it has fresh data
+  } else {
+    broadcastSnapshot();
+  }
+}, RECHECK_INTERVAL_SECONDS * 1000);
+
 pollGraph();
 
 backfillArchive().catch((err) => {
