@@ -196,6 +196,12 @@ header h1 {
   display: none;
 }
 
+.badge.warn {
+  background: var(--status-red-bg);
+  color: var(--status-red-color);
+  cursor: pointer;
+}
+
 #alarm-banner {
   display: flex;
   align-items: center;
@@ -261,6 +267,19 @@ header h1 {
 }
 
 #stale-banner.hidden {
+  display: none;
+}
+
+#action-error-banner {
+  font-size: 1.1rem;
+  text-align: center;
+  padding: 0.65rem;
+  background: var(--status-red-bg);
+  color: var(--status-red-color);
+  font-weight: 600;
+}
+
+#action-error-banner.hidden {
   display: none;
 }
 

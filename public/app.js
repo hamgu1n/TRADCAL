@@ -16,7 +16,10 @@ const alarmBannerTitleEl = document.getElementById('alarm-banner-title');
 const alarmBannerDetailsEl = document.getElementById('alarm-banner-details');
 const alarmDismissEl = document.getElementById('alarm-dismiss');
 const staleBannerEl = document.getElementById('stale-banner');
+const actionErrorBannerEl = document.getElementById('action-error-banner');
 const mockBadgeEl = document.getElementById('mock-badge');
+const filterBadgeEl = document.getElementById('filter-badge');
+const muteBadgeEl = document.getElementById('mute-badge');
 const bodyEl = document.getElementById('appointments-body');
 const emptyStateEl = document.getElementById('empty-state');
 const alarmSound = document.getElementById('alarm-sound');
@@ -36,6 +39,7 @@ const settingsToggleEl = document.getElementById('settings-toggle');
 const settingsOverlayEl = document.getElementById('settings-overlay');
 const settingsCloseEl = document.getElementById('settings-close');
 const refreshNowEl = document.getElementById('refresh-now');
+const resetFiltersEl = document.getElementById('reset-filters');
 const testAlarmEl = document.getElementById('test-alarm');
 const testPingEl = document.getElementById('test-ping');
 const testNewAppointmentEl = document.getElementById('test-new-appointment');
@@ -301,6 +305,7 @@ function renderEvents(events) {
 
   displayedEventIds = new Set(filtered.map((e) => e.id));
   renderAlarms(latestSnapshot.alarms);
+  updateIndicatorBadges();
 
   bodyEl.innerHTML = '';
 
@@ -715,6 +720,53 @@ function renderMockBadge(mockMode) {
   mockBadgeEl.classList.toggle('hidden', !mockMode);
 }
 
+// --- Filter / mute indicator badges ---
+//
+// Someone glancing at the kiosk from across the room has no way to tell a
+// filter is narrowing what's shown, or that a status's alarms are muted —
+// both now persist across reloads, so a choice made once could otherwise go
+// unnoticed indefinitely. These badges (next to the DEMO DATA one) surface
+// that state; clicking either opens Settings so it can be reviewed/reset.
+// Only counts toggles that actively *hide* data as "filtered" — showCompleted
+// off and showFuture off are the app's own shipped defaults, not something a
+// user did to narrow the view, so they don't trigger the badge.
+
+function updateIndicatorBadges() {
+  const filtering =
+    excludedStatuses.size > 0 ||
+    personFilterEl.value !== 'all' ||
+    technicianFilterEl.value !== 'all' ||
+    searchInputEl.value.trim() !== '' ||
+    !showOverdueEl.checked;
+  filterBadgeEl.classList.toggle('hidden', !filtering);
+
+  muteBadgeEl.classList.toggle('hidden', notificationDisabledStatuses.size === 0);
+}
+
+for (const badge of [filterBadgeEl, muteBadgeEl]) {
+  badge.addEventListener('click', () => settingsOverlayEl.classList.remove('hidden'));
+}
+
+// --- Action error banner ---
+//
+// Distinct from the stale-data banner above (which reflects the Graph
+// polling loop): this one surfaces failures from direct user actions in
+// Settings — saving/loading the technician roster — that would otherwise
+// only land in the console, invisible on an unattended kiosk display.
+
+const ACTION_ERROR_DISPLAY_MS = 8_000;
+let actionErrorTimeoutId = null;
+
+function showActionError(message) {
+  actionErrorBannerEl.textContent = message;
+  actionErrorBannerEl.classList.remove('hidden');
+  if (actionErrorTimeoutId) clearTimeout(actionErrorTimeoutId);
+  actionErrorTimeoutId = setTimeout(() => {
+    actionErrorBannerEl.classList.add('hidden');
+    actionErrorTimeoutId = null;
+  }, ACTION_ERROR_DISPLAY_MS);
+}
+
 // --- Stale-data / failure banner ---
 
 function updateStaleBanner() {
@@ -818,6 +870,48 @@ showFutureEl.addEventListener('change', () => applyShowFuture(showFutureEl.check
 
 refreshNowEl.addEventListener('click', () => window.location.reload());
 
+// --- Reset filters & alarm mutes ---
+//
+// Everything above now persists to localStorage (see the individual
+// apply*/change-listener pairs), which means there's otherwise no way back
+// to defaults short of clearing browser storage by hand. On an unattended
+// kiosk, a filter or mute left on by accident could silently under-report
+// appointments/alerts for weeks with nobody noticing — this button clears
+// just the filtering/muting state (not theme or the date-column/show-future
+// display toggles, which are cosmetic preferences rather than things that
+// hide data).
+
+const RESET_FILTERS_DEFAULT_LABEL = resetFiltersEl.textContent;
+
+function resetFiltersAndMutes() {
+  excludedStatuses.clear();
+  notificationDisabledStatuses.clear();
+  localStorage.removeItem('tradcal-excluded-statuses');
+  localStorage.removeItem('tradcal-notification-disabled-statuses');
+
+  personFilterEl.value = 'all';
+  localStorage.removeItem('tradcal-person-filter');
+
+  technicianFilterEl.value = 'all';
+  localStorage.removeItem('tradcal-technician-filter');
+
+  searchInputEl.value = '';
+  localStorage.removeItem('tradcal-search-text');
+
+  applyShowCompleted(false);
+  applyShowOverdue(true);
+
+  renderEvents(latestSnapshot.events);
+}
+
+resetFiltersEl.addEventListener('click', () => {
+  resetFiltersAndMutes();
+  resetFiltersEl.textContent = '✅ Filters reset';
+  setTimeout(() => {
+    resetFiltersEl.textContent = RESET_FILTERS_DEFAULT_LABEL;
+  }, 2000);
+});
+
 // --- Technician roster (managed by hand in Settings) ---
 //
 // Distinct from the "Users" dropdown above, which is auto-derived from
@@ -834,22 +928,26 @@ refreshNowEl.addEventListener('click', () => window.location.reload());
 
 async function saveTechnicians() {
   try {
-    await fetch('/api/technicians', {
+    const response = await fetch('/api/technicians', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(technicians),
     });
+    if (!response.ok) throw new Error(`server responded ${response.status}`);
   } catch (err) {
     console.error('Failed to save technician roster:', err);
+    showActionError('Failed to save the technician roster — your change may not persist.');
   }
 }
 
 async function loadTechnicians() {
   try {
     const response = await fetch('/api/technicians');
+    if (!response.ok) throw new Error(`server responded ${response.status}`);
     technicians = await response.json();
   } catch (err) {
     console.error('Failed to load technician roster:', err);
+    showActionError('Failed to load the technician roster from the server.');
     technicians = [];
   }
   renderTechnicianList();

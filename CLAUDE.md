@@ -74,6 +74,19 @@ before each appointment starts.
     shown on the board while its alarms/pings are silenced. Muted statuses
     are persisted (`tradcal-notification-disabled-statuses`) and checked in
     `eligibleAlarms()` and `checkForNewAppointments()`.
+  - Since filters and mutes now survive reloads indefinitely, two small
+    warning badges next to the DEMO DATA one make that state visible from
+    across the room instead of silently narrowing the board forever: "⚠
+    Filtered view" (a status/person/technician/search filter is actively
+    hiding appointments, or past-due ones are hidden) and "🔕 Alerts muted"
+    (one or more statuses have alarms muted). Clicking either opens
+    Settings. Settings → "Reset filters & alarm mutes" clears all of it in
+    one action (but leaves theme and the date-column/show-future display
+    toggles alone — those are cosmetic, not something hiding data).
+  - An `#action-error-banner` (styled like the stale-data banner, red)
+    surfaces failures from direct user actions — currently just
+    saving/loading the technician roster — that would otherwise only land
+    in the browser console, invisible on an unattended kiosk.
   - Requests a Screen Wake Lock on load (re-requested on visibility change)
     since this runs unattended on a shared monitor and should never sleep.
   - The alarm banner has a **Dismiss** button; until dismissed, the sound

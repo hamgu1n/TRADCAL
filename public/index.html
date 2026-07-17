@@ -18,7 +18,11 @@
       </div>
       <div class="wordmark-text">
         <div class="wordmark-eyebrow">Roanoke College</div>
-        <h1>IT Technician Board <span id="mock-badge" class="badge hidden">DEMO DATA</span></h1>
+        <h1>IT Technician Board
+          <span id="mock-badge" class="badge hidden">DEMO DATA</span>
+          <span id="filter-badge" class="badge warn hidden" title="Some appointments are hidden by an active filter — open Settings to review">⚠ Filtered view</span>
+          <span id="mute-badge" class="badge warn hidden" title="Alarms are muted for one or more statuses — open Settings to review">🔕 Alerts muted</span>
+        </h1>
       </div>
     </div>
     <div class="header-right">
@@ -28,6 +32,7 @@
   </header>
 
   <div id="stale-banner" class="hidden"></div>
+  <div id="action-error-banner" class="hidden"></div>
   <div id="alarm-banner" class="hidden">
     <div class="alarm-banner-content">
       <div id="alarm-banner-title"></div>
@@ -94,6 +99,7 @@
 
         <div class="dropdown-section-label">Actions</div>
         <button type="button" id="refresh-now" class="settings-row">🔄 Refresh now</button>
+        <button type="button" id="reset-filters" class="settings-row">♻️ Reset filters &amp; alarm mutes</button>
         <button type="button" id="test-alarm" class="settings-row">🔊 Test alarm sound</button>
         <button type="button" id="test-ping" class="settings-row">🔔 Test ping sound</button>
         <button type="button" id="test-new-appointment" class="settings-row">🆕 Test new appointment message</button>
