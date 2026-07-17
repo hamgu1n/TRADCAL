@@ -79,6 +79,15 @@ let latestSnapshot = {
 // AUTO_RELOAD_INTERVAL_MS below).
 const excludedStatuses = new Set(JSON.parse(localStorage.getItem('tradcal-excluded-statuses') ?? '[]'));
 
+// Statuses the user has muted via the 🔔 toggle next to each status in the
+// same dropdown — independent of visibility above: a status can still be
+// shown on the board while its alarms/pings are silenced (e.g. "In
+// Progress" appointments someone doesn't want re-pinged about). Checked in
+// eligibleAlarms() and checkForNewAppointments() further down.
+const notificationDisabledStatuses = new Set(
+  JSON.parse(localStorage.getItem('tradcal-notification-disabled-statuses') ?? '[]')
+);
+
 // --- Theme ---
 
 function applyTheme(theme) {
@@ -132,12 +141,18 @@ function populateStatusDropdown(statuses) {
     for (const excluded of [...excludedStatuses]) {
       if (!statuses.includes(excluded)) excludedStatuses.delete(excluded);
     }
+    for (const muted of [...notificationDisabledStatuses]) {
+      if (!statuses.includes(muted)) notificationDisabledStatuses.delete(muted);
+    }
   }
 
   statusDropdownPanelEl.innerHTML = '';
   for (const status of statuses) {
+    const row = document.createElement('div');
+    row.className = 'dropdown-option status-option';
+
     const label = document.createElement('label');
-    label.className = 'dropdown-option';
+    label.className = 'status-option-label';
 
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
@@ -151,7 +166,37 @@ function populateStatusDropdown(statuses) {
 
     label.appendChild(checkbox);
     label.append(status);
-    statusDropdownPanelEl.appendChild(label);
+
+    // Sibling of the label (not nested inside it), so clicking it doesn't
+    // also toggle the visibility checkbox via the label's native behavior.
+    const notifyBtn = document.createElement('button');
+    notifyBtn.type = 'button';
+    notifyBtn.className = 'status-notify-toggle';
+
+    const refreshNotifyBtn = () => {
+      const muted = notificationDisabledStatuses.has(status);
+      notifyBtn.textContent = muted ? '🔕' : '🔔';
+      notifyBtn.classList.toggle('muted', muted);
+      notifyBtn.setAttribute('aria-label', muted ? `Enable alarms for ${status}` : `Mute alarms for ${status}`);
+      notifyBtn.title = muted
+        ? 'Alarms muted for this status — click to re-enable'
+        : 'Alarms enabled for this status — click to mute';
+    };
+    refreshNotifyBtn();
+
+    notifyBtn.addEventListener('click', () => {
+      if (notificationDisabledStatuses.has(status)) notificationDisabledStatuses.delete(status);
+      else notificationDisabledStatuses.add(status);
+      localStorage.setItem(
+        'tradcal-notification-disabled-statuses',
+        JSON.stringify([...notificationDisabledStatuses])
+      );
+      refreshNotifyBtn();
+      renderEvents(latestSnapshot.events);
+    });
+
+    row.append(label, notifyBtn);
+    statusDropdownPanelEl.appendChild(row);
   }
 
   updateStatusDropdownToggleLabel(statuses.length);
@@ -447,7 +492,8 @@ function eligibleAlarms(alarms) {
     const event = latestSnapshot.events.find((e) => e.id === alarm.eventId);
     if (!event) return false;
     const { status } = getStatusAndTechnician(event.categories, technicians);
-    return !isCompletedStatus(status);
+    if (isCompletedStatus(status)) return false;
+    return !notificationDisabledStatuses.has(status);
   });
 }
 
@@ -572,6 +618,8 @@ function checkForNewAppointments(events) {
       if (knownEventIds.has(event.id)) continue;
       const start = new Date(event.start);
       if (start < todayStart || start >= tomorrowStart) continue;
+      const { status } = getStatusAndTechnician(event.categories, technicians);
+      if (notificationDisabledStatuses.has(status)) continue;
       pingForNewAppointment(event);
     }
   }

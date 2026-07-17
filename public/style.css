@@ -491,6 +491,37 @@ header h1 {
   accent-color: var(--yellow);
 }
 
+.status-option {
+  justify-content: space-between;
+  cursor: default;
+}
+
+.status-option-label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+  flex: 1;
+}
+
+.status-notify-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.2rem;
+  opacity: 0.9;
+}
+
+.status-notify-toggle.muted {
+  opacity: 0.4;
+}
+
+.status-notify-toggle:hover {
+  opacity: 1;
+}
+
 main {
   padding: 2rem 3rem;
 }

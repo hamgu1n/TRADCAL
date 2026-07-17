@@ -69,6 +69,11 @@ before each appointment starts.
     restore their saved value once, on the first render after their options
     load (`personFilterRestored`/`technicianFilterRestored`), so a saved
     choice doesn't fight a live selection change afterward.
+  - Each status in the status filter dropdown has its own 🔔/🔕 mute toggle,
+    independent of that status's visibility checkbox — a status can stay
+    shown on the board while its alarms/pings are silenced. Muted statuses
+    are persisted (`tradcal-notification-disabled-statuses`) and checked in
+    `eligibleAlarms()` and `checkForNewAppointments()`.
   - Requests a Screen Wake Lock on load (re-requested on visibility change)
     since this runs unattended on a shared monitor and should never sleep.
   - The alarm banner has a **Dismiss** button; until dismissed, the sound
