@@ -48,10 +48,23 @@
         <button type="button" class="dropdown-toggle" id="status-dropdown-toggle">Status: All ▾</button>
         <div class="dropdown-panel hidden" id="status-dropdown-panel"></div>
       </div>
-      <label>
-        Users:
-        <select id="person-filter"><option value="all">All</option></select>
-      </label>
+      <span class="filter-field">
+        <label for="person-filter-input">Users:</label>
+        <span class="combobox" id="person-combobox">
+          <input
+            type="text"
+            id="person-filter-input"
+            placeholder="All"
+            autocomplete="off"
+            role="combobox"
+            aria-expanded="false"
+            aria-autocomplete="list"
+            aria-controls="person-filter-list"
+          />
+          <button type="button" id="person-filter-clear" class="combobox-clear hidden" aria-label="Clear user filter">×</button>
+          <ul class="combobox-list hidden" id="person-filter-list" role="listbox"></ul>
+        </span>
+      </span>
       <label>
         Technician:
         <select id="technician-filter"><option value="all">All</option></select>
