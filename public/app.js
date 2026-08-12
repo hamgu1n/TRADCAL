@@ -27,7 +27,9 @@ const pingSound = document.getElementById('ping-sound');
 const statusDropdownEl = document.getElementById('status-dropdown');
 const statusDropdownToggleEl = document.getElementById('status-dropdown-toggle');
 const statusDropdownPanelEl = document.getElementById('status-dropdown-panel');
-const personFilterEl = document.getElementById('person-filter');
+const personInputEl = document.getElementById('person-filter-input');
+const personClearEl = document.getElementById('person-filter-clear');
+const personListEl = document.getElementById('person-filter-list');
 const searchInputEl = document.getElementById('search-input');
 const showCompletedEl = document.getElementById('show-completed');
 const showOverdueEl = document.getElementById('show-overdue');
@@ -246,27 +248,141 @@ tickClock();
 
 // --- Filter option population ---
 
-function populateFilterOptions(selectEl, values) {
-  const previousValue = selectEl.value || 'all';
-  const options = ['all', ...values];
+// --- Users filter (searchable combobox) ---
+//
+// A plain <select> got unusable once the calendar carried more than a screenful
+// of names, so the Users filter is a type-to-narrow combobox instead. It still
+// resolves to exactly one person (or 'all'), so everything downstream —
+// filterEvents, the saved filter, the "Filtered view" badge — is unchanged;
+// only the way you get to that value differs. The typed text is a search query,
+// not the filter itself: nothing applies until an option is chosen, and the
+// input snaps back to the active selection otherwise.
 
-  selectEl.innerHTML = '';
-  for (const value of options) {
-    const option = document.createElement('option');
-    option.value = value;
-    option.textContent = value === 'all' ? 'All' : value;
-    selectEl.appendChild(option);
+// 'all', or the exact displayPerson() string of the selected person.
+let personFilterValue = 'all';
+// Every person currently on the calendar; refreshed each render.
+let personOptions = [];
+// Index into the currently shown suggestions for keyboard navigation, or -1.
+let personActiveIndex = -1;
+// The saved filter can only be applied once the names it refers to have
+// actually arrived, so this restore happens on the first render that has
+// options — not merely the first render, which on a cold load runs before any
+// event data and would silently discard the saved value.
+let personFilterRestored = false;
+
+function setPersonFilter(value, { persist = true } = {}) {
+  personFilterValue = value;
+  personInputEl.value = value === 'all' ? '' : value;
+  personClearEl.classList.toggle('hidden', value === 'all');
+  if (persist) {
+    if (value === 'all') localStorage.removeItem('tradcal-person-filter');
+    else localStorage.setItem('tradcal-person-filter', value);
   }
-
-  selectEl.value = options.includes(previousValue) ? previousValue : 'all';
 }
 
-// The person dropdown's options are derived from whoever's on the calendar
-// right now, so a saved filter value can only be applied once those options
-// exist — this flag makes that restore happen exactly once, on the first
-// render after page load, rather than fighting the user's live selection on
-// every subsequent render.
-let personFilterRestored = false;
+function personSuggestions() {
+  const query = personInputEl.value.trim().toLowerCase();
+  // A query exactly equal to the current selection means the user has just
+  // focused the field without typing — show everything, so the list works as a
+  // browsable dropdown too, not only as a search.
+  if (!query || query === personFilterValue.toLowerCase()) return personOptions;
+  return personOptions.filter((name) => name.toLowerCase().includes(query));
+}
+
+function renderPersonSuggestions() {
+  const suggestions = personSuggestions();
+  personListEl.innerHTML = '';
+
+  if (suggestions.length === 0) {
+    const empty = document.createElement('li');
+    empty.className = 'combobox-empty';
+    empty.textContent = 'No matching users';
+    personListEl.appendChild(empty);
+    return;
+  }
+
+  suggestions.forEach((name, index) => {
+    const option = document.createElement('li');
+    option.className = 'combobox-option';
+    option.setAttribute('role', 'option');
+    option.dataset.value = name;
+    option.textContent = name;
+    if (index === personActiveIndex) option.classList.add('active');
+    if (name === personFilterValue) option.classList.add('selected');
+    personListEl.appendChild(option);
+  });
+}
+
+function openPersonList() {
+  renderPersonSuggestions();
+  personListEl.classList.remove('hidden');
+  personInputEl.setAttribute('aria-expanded', 'true');
+}
+
+function closePersonList() {
+  personListEl.classList.add('hidden');
+  personInputEl.setAttribute('aria-expanded', 'false');
+  personActiveIndex = -1;
+  // Discard a half-typed query so the field always shows what's actually
+  // filtering the board, never a search string that was never committed.
+  personInputEl.value = personFilterValue === 'all' ? '' : personFilterValue;
+}
+
+function choosePerson(value) {
+  setPersonFilter(value);
+  closePersonList();
+  renderEvents(latestSnapshot.events);
+}
+
+personInputEl.addEventListener('focus', openPersonList);
+personInputEl.addEventListener('input', () => {
+  personActiveIndex = -1;
+  openPersonList();
+});
+
+personInputEl.addEventListener('keydown', (e) => {
+  const suggestions = personSuggestions();
+
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (personListEl.classList.contains('hidden')) openPersonList();
+    if (suggestions.length === 0) return;
+    const step = e.key === 'ArrowDown' ? 1 : -1;
+    personActiveIndex = (personActiveIndex + step + suggestions.length) % suggestions.length;
+    renderPersonSuggestions();
+    personListEl.querySelector('.combobox-option.active')?.scrollIntoView({ block: 'nearest' });
+    return;
+  }
+
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    // With nothing highlighted, Enter takes the top match — the common case is
+    // typing enough to leave one obvious result and hitting Enter.
+    const chosen = suggestions[personActiveIndex >= 0 ? personActiveIndex : 0];
+    if (personInputEl.value.trim() === '') choosePerson('all');
+    else if (chosen) choosePerson(chosen);
+    return;
+  }
+
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    closePersonList();
+    personInputEl.blur();
+  }
+});
+
+// mousedown, not click: the list is closed on blur, which fires first and would
+// otherwise tear the option out from under the click.
+personListEl.addEventListener('mousedown', (e) => {
+  const option = e.target.closest('.combobox-option');
+  if (!option) return;
+  e.preventDefault();
+  choosePerson(option.dataset.value);
+});
+
+personInputEl.addEventListener('blur', closePersonList);
+
+personClearEl.addEventListener('click', () => choosePerson('all'));
 
 function updateFilterOptions(events) {
   const statuses = [
@@ -274,18 +390,36 @@ function updateFilterOptions(events) {
   ].sort();
   const persons = [...new Set(events.map((e) => displayPerson(e.person)).filter((p) => p && p !== '-'))].sort();
   populateStatusDropdown(statuses);
-  populateFilterOptions(personFilterEl, persons);
+  personOptions = persons;
+
+  if (persons.length === 0) return;
 
   if (!personFilterRestored) {
     personFilterRestored = true;
     const saved = localStorage.getItem('tradcal-person-filter');
-    if (saved && [...personFilterEl.options].some((o) => o.value === saved)) {
-      personFilterEl.value = saved;
-    }
+    if (saved && persons.includes(saved)) setPersonFilter(saved, { persist: false });
   }
+
+  // Whoever was selected is no longer on the calendar at all (their
+  // appointments aged off the board) — drop back to All rather than showing an
+  // empty board with no visible reason.
+  if (personFilterValue !== 'all' && !persons.includes(personFilterValue)) {
+    setPersonFilter('all');
+  }
+
+  if (!personListEl.classList.contains('hidden')) renderPersonSuggestions();
 }
 
 // --- Appointment table rendering ---
+
+// Multi-attendee events can produce a Person value far wider than its column
+// ("Lion, Tamara / Meadows, David / ..."), which would wrap the row to two or
+// three lines and cost several appointments' worth of screen height on the
+// kiosk. So the cell is clamped to one line with an ellipsis, and clicking it
+// expands that row's full invitee list. The expanded set is keyed by event id
+// and survives re-renders — the board redraws on every poll, which would
+// otherwise snap an expanded cell shut while someone is reading it.
+const expandedPersonIds = new Set();
 
 function renderEvents(events) {
   const now = new Date();
@@ -294,7 +428,7 @@ function renderEvents(events) {
   const filtered = filterEvents(events, {
     now,
     excludedStatuses,
-    personFilter: personFilterEl.value,
+    personFilter: personFilterValue,
     technicianFilter: technicianFilterEl.value,
     technicianRoster: technicians,
     showCompleted: showCompletedEl.checked,
@@ -304,6 +438,14 @@ function renderEvents(events) {
   });
 
   displayedEventIds = new Set(filtered.map((e) => e.id));
+
+  // Drop expansion state for events that have left the board entirely, so the
+  // set doesn't accumulate forever on a display that runs for weeks.
+  const liveIds = new Set(events.map((e) => e.id));
+  for (const id of expandedPersonIds) {
+    if (!liveIds.has(id)) expandedPersonIds.delete(id);
+  }
+
   renderAlarms(latestSnapshot.alarms);
   updateIndicatorBadges(filtered);
 
@@ -367,13 +509,46 @@ function renderEvents(events) {
       <td class="time-column">${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</td>
       <td>${escapeHtml(event.subject)}</td>
       <td>${escapeHtml(event.location)}</td>
-      <td>${escapeHtml(person)}</td>
+      <td class="person-column"><span class="person-text${expandedPersonIds.has(event.id) ? ' expanded' : ''}" data-event-id="${escapeHtml(event.id)}" title="${escapeHtml(person)}">${escapeHtml(person)}</span></td>
       <td class="technician-column"><span class="technician-text">${escapeHtml(technician)}</span></td>
       <td><span class="status-badge ${statusColorClass(status)}">${escapeHtml(status)}</span></td>
     `;
     bodyEl.appendChild(row);
   }
+
+  markTruncatedPersonCells();
 }
+
+// A cell is only worth clicking if the text actually overflows, which can't be
+// known from the string alone (it depends on column width and font). Measure
+// after layout and mark the ones that do, so the others don't get a pointer
+// cursor and hover affordance for nothing.
+function markTruncatedPersonCells() {
+  for (const el of bodyEl.querySelectorAll('.person-text')) {
+    if (el.classList.contains('expanded')) {
+      el.classList.add('truncatable');
+      continue;
+    }
+    el.classList.toggle('truncatable', el.scrollWidth > el.clientWidth + 1);
+  }
+}
+
+bodyEl.addEventListener('click', (e) => {
+  const personEl = e.target.closest('.person-text');
+  if (!personEl) return;
+  // Nothing hidden to reveal — leave the click alone.
+  if (!personEl.classList.contains('truncatable')) return;
+
+  const id = personEl.dataset.eventId;
+  const nowExpanded = !personEl.classList.contains('expanded');
+  personEl.classList.toggle('expanded', nowExpanded);
+  if (nowExpanded) expandedPersonIds.add(id);
+  else expandedPersonIds.delete(id);
+  markTruncatedPersonCells();
+});
+
+// The column width changes with the viewport, so what overflows changes too.
+window.addEventListener('resize', markTruncatedPersonCells);
 
 // --- Alarms ---
 //
@@ -741,7 +916,7 @@ const MUTE_BADGE_DEFAULT_TITLE = muteBadgeEl.title;
 function updateIndicatorBadges(displayedEvents) {
   const filtering =
     excludedStatuses.size > 0 ||
-    personFilterEl.value !== 'all' ||
+    personFilterValue !== 'all' ||
     technicianFilterEl.value !== 'all' ||
     searchInputEl.value.trim() !== '' ||
     !showOverdueEl.checked;
@@ -834,11 +1009,6 @@ function renderAll() {
   updateStaleBanner();
 }
 
-personFilterEl.addEventListener('change', () => {
-  localStorage.setItem('tradcal-person-filter', personFilterEl.value);
-  renderEvents(latestSnapshot.events);
-});
-
 function applyShowCompleted(shouldShow) {
   showCompletedEl.checked = shouldShow;
   localStorage.setItem('tradcal-show-completed', String(shouldShow));
@@ -912,8 +1082,7 @@ function resetFiltersAndMutes() {
   localStorage.removeItem('tradcal-excluded-statuses');
   localStorage.removeItem('tradcal-notification-disabled-statuses');
 
-  personFilterEl.value = 'all';
-  localStorage.removeItem('tradcal-person-filter');
+  setPersonFilter('all');
 
   technicianFilterEl.value = 'all';
   localStorage.removeItem('tradcal-technician-filter');

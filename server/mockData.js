@@ -25,7 +25,9 @@ export function generateMockEvents(now = new Date()) {
       start: minutesFromNow(15),
       end: minutesFromNow(60),
       location: 'Computer Lab 3',
-      person: 'Chen, Amy',
+      // Multi-attendee on purpose: exercises the Person column's
+      // truncate-and-click-to-expand behavior in the kiosk UI.
+      person: 'Chen, Amy / Whitfield, Gregory / Santos-Marin, Alejandra',
       categories: ['Computer Lab Work', 'Jordan'],
     },
     {
