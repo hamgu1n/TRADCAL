@@ -585,6 +585,37 @@ table.hide-date-column .date-text {
   text-align: center;
 }
 
+/* Person cells clamp to a single line; .truncatable is added by app.js only
+   when the text really is cut off, and .expanded is the clicked-open state
+   showing every invitee. */
+.person-column {
+  max-width: 22rem;
+}
+
+.person-text {
+  display: block;
+  max-width: 22rem;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.person-text.truncatable {
+  cursor: pointer;
+}
+
+.person-text.truncatable:hover {
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 0.2em;
+}
+
+.person-text.expanded {
+  overflow: visible;
+  white-space: normal;
+  text-overflow: clip;
+}
+
 .technician-column {
   text-align: left;
   padding-left: 0;

@@ -287,6 +287,15 @@ function updateFilterOptions(events) {
 
 // --- Appointment table rendering ---
 
+// Multi-attendee events can produce a Person value far wider than its column
+// ("Lion, Tamara / Meadows, David / ..."), which would wrap the row to two or
+// three lines and cost several appointments' worth of screen height on the
+// kiosk. So the cell is clamped to one line with an ellipsis, and clicking it
+// expands that row's full invitee list. The expanded set is keyed by event id
+// and survives re-renders — the board redraws on every poll, which would
+// otherwise snap an expanded cell shut while someone is reading it.
+const expandedPersonIds = new Set();
+
 function renderEvents(events) {
   const now = new Date();
   updateFilterOptions(events);
@@ -304,6 +313,14 @@ function renderEvents(events) {
   });
 
   displayedEventIds = new Set(filtered.map((e) => e.id));
+
+  // Drop expansion state for events that have left the board entirely, so the
+  // set doesn't accumulate forever on a display that runs for weeks.
+  const liveIds = new Set(events.map((e) => e.id));
+  for (const id of expandedPersonIds) {
+    if (!liveIds.has(id)) expandedPersonIds.delete(id);
+  }
+
   renderAlarms(latestSnapshot.alarms);
   updateIndicatorBadges(filtered);
 
@@ -367,13 +384,46 @@ function renderEvents(events) {
       <td class="time-column">${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</td>
       <td>${escapeHtml(event.subject)}</td>
       <td>${escapeHtml(event.location)}</td>
-      <td>${escapeHtml(person)}</td>
+      <td class="person-column"><span class="person-text${expandedPersonIds.has(event.id) ? ' expanded' : ''}" data-event-id="${escapeHtml(event.id)}" title="${escapeHtml(person)}">${escapeHtml(person)}</span></td>
       <td class="technician-column"><span class="technician-text">${escapeHtml(technician)}</span></td>
       <td><span class="status-badge ${statusColorClass(status)}">${escapeHtml(status)}</span></td>
     `;
     bodyEl.appendChild(row);
   }
+
+  markTruncatedPersonCells();
 }
+
+// A cell is only worth clicking if the text actually overflows, which can't be
+// known from the string alone (it depends on column width and font). Measure
+// after layout and mark the ones that do, so the others don't get a pointer
+// cursor and hover affordance for nothing.
+function markTruncatedPersonCells() {
+  for (const el of bodyEl.querySelectorAll('.person-text')) {
+    if (el.classList.contains('expanded')) {
+      el.classList.add('truncatable');
+      continue;
+    }
+    el.classList.toggle('truncatable', el.scrollWidth > el.clientWidth + 1);
+  }
+}
+
+bodyEl.addEventListener('click', (e) => {
+  const personEl = e.target.closest('.person-text');
+  if (!personEl) return;
+  // Nothing hidden to reveal — leave the click alone.
+  if (!personEl.classList.contains('truncatable')) return;
+
+  const id = personEl.dataset.eventId;
+  const nowExpanded = !personEl.classList.contains('expanded');
+  personEl.classList.toggle('expanded', nowExpanded);
+  if (nowExpanded) expandedPersonIds.add(id);
+  else expandedPersonIds.delete(id);
+  markTruncatedPersonCells();
+});
+
+// The column width changes with the viewport, so what overflows changes too.
+window.addEventListener('resize', markTruncatedPersonCells);
 
 // --- Alarms ---
 //
