@@ -8,6 +8,9 @@ import {
   computeActiveAlarms,
   backfillArchive,
   markAlarmPlayed,
+  getTestAlarmPlayed,
+  markTestAlarmPlayed,
+  resetTestAlarmPlayed,
 } from './appointmentStore.js';
 import { readArchive } from './archive.js';
 import { readRoster, writeRoster } from './technicianRoster.js';
@@ -82,6 +85,25 @@ app.post('/api/alarms/played', (req, res) => {
     return;
   }
   res.status(204).end();
+});
+
+// Backs the Settings test buttons for the played flags above — same idea,
+// but for a stand-in test appointment rather than a real one.
+app.get('/api/alarms/test-played', (req, res) => {
+  res.json(getTestAlarmPlayed());
+});
+
+app.post('/api/alarms/test-played', (req, res) => {
+  if (!markTestAlarmPlayed(req.body?.thresholdMinutes)) {
+    res.status(400).json({ error: 'Unknown thresholdMinutes' });
+    return;
+  }
+  res.json(getTestAlarmPlayed());
+});
+
+app.delete('/api/alarms/test-played', (req, res) => {
+  resetTestAlarmPlayed();
+  res.json(getTestAlarmPlayed());
 });
 
 function sendSnapshot(res) {
