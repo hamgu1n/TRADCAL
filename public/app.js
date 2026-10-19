@@ -956,6 +956,90 @@ testNewAppointmentEl.addEventListener('click', () => {
   }, 2500);
 });
 
+// --- Played-flag test buttons ---
+//
+// One button per alarm threshold, run against a stand-in test appointment
+// whose played flags live on the server (/api/alarms/test-played), the same
+// way real appointments' do. The first click plays the alarm and sets the
+// flag; later clicks are skipped — including after a page reload — until
+// "Reset test played flags" clears them. 30/15 behave like the ping-style
+// heads-up, 5 like the urgent looping alarm.
+
+const testPlayedButtonEls = [...document.querySelectorAll('.test-played')];
+const resetTestPlayedEl = document.getElementById('reset-test-played');
+let testPlayedFlags = [false, false, false];
+
+function renderTestPlayedButtons() {
+  for (const button of testPlayedButtonEls) {
+    const threshold = Number(button.dataset.threshold);
+    const played = testPlayedFlags[ALARM_THRESHOLDS_MINUTES.indexOf(threshold)];
+    button.textContent = played
+      ? `✅ ${threshold}-min alarm — played (won't play again)`
+      : `⏰ Test ${threshold}-min alarm — not played yet`;
+  }
+}
+
+async function requestTestPlayed(method, body) {
+  try {
+    const response = await fetch('/api/alarms/test-played', {
+      method,
+      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!response.ok) throw new Error(`server responded ${response.status}`);
+    testPlayedFlags = await response.json();
+  } catch (err) {
+    console.error('Test played-flag request failed:', err);
+  }
+  renderTestPlayedButtons();
+}
+
+function showTestPlayedAlarm(threshold) {
+  testAlarmActive = true;
+  currentAlarmKey = `test-played-${threshold}`;
+  clearPingTimeout();
+  alarmBannerTitleEl.textContent = `⏰ TEST — Starts in ${threshold} min — Sample Appointment`;
+  bannerEl.classList.remove('hidden');
+
+  if (threshold === 5) {
+    if (dismissedAlarmKey === currentAlarmKey) dismissedAlarmKey = null;
+    alarmDismissEl.classList.remove('hidden');
+    alarmBannerDetailsEl.textContent = 'Triggered from Settings · Dismiss to stop';
+    startAlarmLoop();
+    return;
+  }
+
+  stopAlarmLoop();
+  alarmDismissEl.classList.add('hidden');
+  alarmBannerDetailsEl.textContent = 'Triggered from Settings · Clears itself in 60s';
+  playPingSound();
+  pingHideTimeoutId = setTimeout(() => {
+    bannerEl.classList.add('hidden');
+    pingHideTimeoutId = null;
+    testAlarmActive = false;
+  }, PING_DISPLAY_MS);
+}
+
+for (const button of testPlayedButtonEls) {
+  button.addEventListener('click', async () => {
+    const threshold = Number(button.dataset.threshold);
+    // Re-fetch first so a flag set from another display (or before a
+    // reload) is respected rather than this page's possibly stale copy.
+    await requestTestPlayed('GET');
+    if (testPlayedFlags[ALARM_THRESHOLDS_MINUTES.indexOf(threshold)]) {
+      button.textContent = `🔕 ${threshold}-min alarm already played — skipped`;
+      setTimeout(renderTestPlayedButtons, 2500);
+      return;
+    }
+    showTestPlayedAlarm(threshold);
+    await requestTestPlayed('POST', { thresholdMinutes: threshold });
+  });
+}
+
+resetTestPlayedEl.addEventListener('click', () => requestTestPlayed('DELETE'));
+
+requestTestPlayed('GET');
+
 // --- Mock-mode badge ---
 
 function renderMockBadge(mockMode) {

@@ -1,6 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { computeActiveAlarms, replaceCachedEvents, getCachedEvents, markAlarmPlayed } from './appointmentStore.js';
+import {
+  computeActiveAlarms,
+  replaceCachedEvents,
+  getCachedEvents,
+  markAlarmPlayed,
+  getTestAlarmPlayed,
+  markTestAlarmPlayed,
+  resetTestAlarmPlayed,
+} from './appointmentStore.js';
 
 function eventStartingInMinutes(minutes, now) {
   return {
@@ -112,4 +120,14 @@ test('rejects unknown events and thresholds', () => {
   assert.equal(markAlarmPlayed('nope', 30), false);
   assert.equal(markAlarmPlayed('evt-1', 10), false);
   assert.deepEqual(playedFlags('evt-1'), [false, false, false]);
+});
+
+test('test alarm played flags set, survive polls, and reset', () => {
+  resetTestAlarmPlayed();
+  assert.equal(markTestAlarmPlayed(15), true);
+  replaceCachedEvents([]);
+  assert.deepEqual(getTestAlarmPlayed(), [false, true, false]);
+  assert.equal(markTestAlarmPlayed(10), false);
+  resetTestAlarmPlayed();
+  assert.deepEqual(getTestAlarmPlayed(), [false, false, false]);
 });

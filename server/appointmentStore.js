@@ -89,6 +89,27 @@ export async function refreshEvents() {
   return replaceCachedEvents(freshEvents);
 }
 
+// Played flags for the Settings → "Test played flags" buttons: a stand-in
+// appointment that isn't on the calendar, so the skip-if-played behavior can
+// be checked (including across a page reload) without waiting for a real
+// appointment to hit 30/15/5 minutes out.
+let testAlarmPlayed = emptyPlayedFlags();
+
+export function getTestAlarmPlayed() {
+  return [...testAlarmPlayed];
+}
+
+export function markTestAlarmPlayed(thresholdMinutes) {
+  const index = ALARM_THRESHOLDS_MINUTES.indexOf(thresholdMinutes);
+  if (index === -1) return false;
+  testAlarmPlayed[index] = true;
+  return true;
+}
+
+export function resetTestAlarmPlayed() {
+  testAlarmPlayed = emptyPlayedFlags();
+}
+
 // Swaps in a fresh event list, dropping played-alarm flags for events that
 // are no longer on it. Split out from refreshEvents() so it's testable
 // without Graph or touching the archive file.
