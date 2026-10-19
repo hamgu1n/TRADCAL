@@ -2,7 +2,13 @@ import 'dotenv/config';
 import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { refreshEvents, getCachedEvents, computeActiveAlarms, backfillArchive } from './appointmentStore.js';
+import {
+  refreshEvents,
+  getCachedEvents,
+  computeActiveAlarms,
+  backfillArchive,
+  markAlarmPlayed,
+} from './appointmentStore.js';
 import { readArchive } from './archive.js';
 import { readRoster, writeRoster } from './technicianRoster.js';
 
@@ -64,6 +70,18 @@ app.put('/api/technicians', (req, res) => {
     return;
   }
   res.json(writeRoster(req.body));
+});
+
+// A display reports here once it has played the sound for an alarm, so that
+// alarm isn't replayed after the kiosk's periodic page reload (or by another
+// display). The flag shows up on the event as `played` in later snapshots.
+app.post('/api/alarms/played', (req, res) => {
+  const { eventId, thresholdMinutes } = req.body ?? {};
+  if (!markAlarmPlayed(eventId, thresholdMinutes)) {
+    res.status(400).json({ error: 'Unknown eventId or thresholdMinutes' });
+    return;
+  }
+  res.status(204).end();
 });
 
 function sendSnapshot(res) {

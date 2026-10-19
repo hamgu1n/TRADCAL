@@ -30,6 +30,13 @@ before each appointment starts.
     `archive.js`. `backfillArchive()` runs once at startup, pulling the last
     30 days directly from Graph so the archive doesn't start out empty and
     take weeks to reflect real history.
+    Also tracks a per-event `played` array (`[30, 15, 5]` flags), attached
+    to every event in the snapshot. A display `POST`s
+    `/api/alarms/played` once it plays an alarm's sound and won't start an
+    alarm whose flag is already set — so the kiosk's periodic self-reload
+    can't replay an alarm still inside its one-minute window. Flags reset if
+    the event's start time changes (rescheduled), and are in-memory only
+    (a server restart clears them).
   - `server/archive.js` — appends appointments that have aged off the live
     board to `appointments-archive.csv` (project root, gitignored) and
     prunes it to a rolling 30-day window on every poll. Browsable in the UI

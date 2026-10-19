@@ -24,6 +24,8 @@ const bodyEl = document.getElementById('appointments-body');
 const emptyStateEl = document.getElementById('empty-state');
 const alarmSound = document.getElementById('alarm-sound');
 const pingSound = document.getElementById('ping-sound');
+const ayham1Sound = document.getElementById('ayham1-sound');
+const newAppointmentSoundEl = document.getElementById('new-appointment-sound');
 const statusDropdownEl = document.getElementById('status-dropdown');
 const statusDropdownToggleEl = document.getElementById('status-dropdown-toggle');
 const statusDropdownPanelEl = document.getElementById('status-dropdown-panel');
@@ -605,14 +607,17 @@ function stopAlarmLoop() {
 const PING_REPEAT_COUNT = 3;
 let pingChainHandler = null;
 
-// Plays the ping sound PING_REPEAT_COUNT times back-to-back (chained off the
-// audio element's own "ended" event, so each play waits for the previous
+let pingChainAudio = null;
+
+// Plays a ping-style sound PING_REPEAT_COUNT times back-to-back (chained off
+// the audio element's own "ended" event, so each play waits for the previous
 // one to actually finish rather than overlapping). Used for every
 // non-urgent alert — 30/15-min heads-up, new-appointment ping, and both
-// their Settings test buttons.
-function playPingSound() {
+// their Settings test buttons. Defaults to ping.mp3; the new-appointment
+// alert passes whichever sound is picked in Settings.
+function playPingSound(sound = pingSound) {
   if (pingChainHandler) {
-    pingSound.removeEventListener('ended', pingChainHandler);
+    pingChainAudio.removeEventListener('ended', pingChainHandler);
     pingChainHandler = null;
   }
 
@@ -620,21 +625,22 @@ function playPingSound() {
 
   const playNext = () => {
     if (playsRemaining <= 0) {
-      pingSound.removeEventListener('ended', playNext);
+      sound.removeEventListener('ended', playNext);
       pingChainHandler = null;
       return;
     }
     playsRemaining--;
-    pingSound.currentTime = 0;
-    pingSound.play().catch((err) => {
+    sound.currentTime = 0;
+    sound.play().catch((err) => {
       console.error('Ping sound failed to play:', err);
-      pingSound.removeEventListener('ended', playNext);
+      sound.removeEventListener('ended', playNext);
       pingChainHandler = null;
     });
   };
 
   pingChainHandler = playNext;
-  pingSound.addEventListener('ended', playNext);
+  pingChainAudio = sound;
+  sound.addEventListener('ended', playNext);
   playNext();
 }
 
@@ -677,13 +683,53 @@ function eligibleAlarms(alarms) {
   });
 }
 
+// Each event carries a server-side `played` array — one flag per alarm
+// threshold, in this order — set once any display has played that alarm's
+// sound. It's what keeps the kiosk's periodic self-reload (which wipes
+// currentAlarmKey) from replaying an alarm that's still inside its
+// one-minute window.
+const ALARM_THRESHOLDS_MINUTES = [30, 15, 5];
+
+function isAlarmPlayed(alarm) {
+  const event = latestSnapshot.events.find((e) => e.id === alarm.eventId);
+  const index = ALARM_THRESHOLDS_MINUTES.indexOf(alarm.thresholdMinutes);
+  return event?.played?.[index] === true;
+}
+
+function markAlarmPlayed(alarm) {
+  // Set locally as well, so this snapshot reflects it before the server's
+  // next broadcast does.
+  const event = latestSnapshot.events.find((e) => e.id === alarm.eventId);
+  const index = ALARM_THRESHOLDS_MINUTES.indexOf(alarm.thresholdMinutes);
+  if (event?.played) event.played[index] = true;
+
+  // keepalive so the request still goes out if a reload starts right after.
+  fetch('/api/alarms/played', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ eventId: alarm.eventId, thresholdMinutes: alarm.thresholdMinutes }),
+    keepalive: true,
+  }).catch((err) => {
+    console.error('Failed to record alarm as played:', err);
+  });
+}
+
+function alarmKey(alarm) {
+  return `${alarm.eventId}-${alarm.thresholdMinutes}`;
+}
+
 function renderAlarms(rawAlarms) {
   // A manually-triggered test alarm takes precedence until dismissed —
   // otherwise the next real snapshot (every ~20s) would immediately hide
   // the test banner just because there's no real alarm active right now.
   if (testAlarmActive) return;
 
-  const alarms = eligibleAlarms(rawAlarms);
+  // An alarm already played is skipped, unless it's the one this page is
+  // showing right now — the urgent alarm keeps looping across the ~20s
+  // rebroadcasts after its own flag has been set.
+  const alarms = eligibleAlarms(rawAlarms).filter(
+    (alarm) => !isAlarmPlayed(alarm) || alarmKey(alarm) === currentAlarmKey
+  );
 
   if (alarms.length === 0) {
     bannerEl.classList.add('hidden');
@@ -694,7 +740,7 @@ function renderAlarms(rawAlarms) {
   }
 
   const alarm = alarms[0];
-  const key = `${alarm.eventId}-${alarm.thresholdMinutes}`;
+  const key = alarmKey(alarm);
   const isUrgent = alarm.thresholdMinutes === 5;
 
   if (!isUrgent) {
@@ -710,6 +756,7 @@ function renderAlarms(rawAlarms) {
     fillBannerContent(alarm);
     bannerEl.classList.remove('hidden');
     playPingSound();
+    markAlarmPlayed(alarm);
     pingHideTimeoutId = setTimeout(() => {
       bannerEl.classList.add('hidden');
       pingHideTimeoutId = null;
@@ -731,6 +778,7 @@ function renderAlarms(rawAlarms) {
   fillBannerContent(alarm);
   bannerEl.classList.remove('hidden');
   startAlarmLoop();
+  if (!isAlarmPlayed(alarm)) markAlarmPlayed(alarm);
 }
 
 alarmDismissEl.addEventListener('click', () => {
@@ -750,6 +798,25 @@ alarmDismissEl.addEventListener('click', () => {
 // urgent (dismiss-required) alarm that's currently showing.
 
 let knownEventIds = null;
+
+// Which sound the new-appointment alert plays (Settings → Sounds). Separate
+// from the 30/15-min heads-up ping, which always uses ping.mp3. "off" still
+// shows the banner, just silently. Persisted like the other settings so it
+// survives the board's self-reload.
+const NEW_APPOINTMENT_SOUNDS = { ping: pingSound, ayham1: ayham1Sound, off: null };
+let newAppointmentSound = localStorage.getItem('tradcal-new-appointment-sound');
+if (!(newAppointmentSound in NEW_APPOINTMENT_SOUNDS)) newAppointmentSound = 'ping';
+newAppointmentSoundEl.value = newAppointmentSound;
+
+newAppointmentSoundEl.addEventListener('change', () => {
+  newAppointmentSound = newAppointmentSoundEl.value;
+  localStorage.setItem('tradcal-new-appointment-sound', newAppointmentSound);
+});
+
+function playNewAppointmentSound() {
+  const sound = NEW_APPOINTMENT_SOUNDS[newAppointmentSound];
+  if (sound) playPingSound(sound);
+}
 
 function pingForNewAppointment(event) {
   const key = `new-${event.id}`;
@@ -771,7 +838,7 @@ function pingForNewAppointment(event) {
   alarmBannerTitleEl.textContent = `🆕 New appointment today — ${event.subject}`;
   alarmBannerDetailsEl.textContent = details;
   bannerEl.classList.remove('hidden');
-  playPingSound();
+  playNewAppointmentSound();
 
   pingHideTimeoutId = setTimeout(() => {
     bannerEl.classList.add('hidden');
@@ -875,7 +942,7 @@ testNewAppointmentEl.addEventListener('click', () => {
   alarmBannerTitleEl.textContent = '🆕 New appointment today — Sample Appointment';
   alarmBannerDetailsEl.textContent = `${time}  ·  Test Location  ·  Triggered manually from Settings`;
   bannerEl.classList.remove('hidden');
-  playPingSound();
+  playNewAppointmentSound();
 
   pingHideTimeoutId = setTimeout(() => {
     bannerEl.classList.add('hidden');
