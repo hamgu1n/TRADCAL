@@ -110,6 +110,16 @@
           Show future appointments
         </label>
 
+        <div class="dropdown-section-label">Sounds</div>
+        <label class="dropdown-option">
+          New appointment sound
+          <select id="new-appointment-sound">
+            <option value="ping">Ping</option>
+            <option value="ayham1">Ayham 1</option>
+            <option value="off">Off (banner only)</option>
+          </select>
+        </label>
+
         <div class="dropdown-section-label">Actions</div>
         <button type="button" id="refresh-now" class="settings-row">🔄 Refresh now</button>
         <button type="button" id="reset-filters" class="settings-row">♻️ Reset filters &amp; alarm mutes</button>
@@ -162,6 +172,7 @@
 
   <audio id="alarm-sound" src="alarm.mp3" preload="auto"></audio>
   <audio id="ping-sound" src="ping.mp3" preload="auto"></audio>
+  <audio id="ayham1-sound" src="audio/ayham1.mp3" preload="auto"></audio>
 
   <script type="module" src="app.js"></script>
 </body>

@@ -1027,3 +1027,13 @@ tbody tr.next-upcoming {
   width: 1.3rem;
   height: 1.3rem;
 }
+
+#settings-panel .dropdown-option select {
+  margin-left: auto;
+  font-size: 1.1rem;
+  padding: 0.3rem 0.5rem;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+}

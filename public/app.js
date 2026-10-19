@@ -24,6 +24,8 @@ const bodyEl = document.getElementById('appointments-body');
 const emptyStateEl = document.getElementById('empty-state');
 const alarmSound = document.getElementById('alarm-sound');
 const pingSound = document.getElementById('ping-sound');
+const ayham1Sound = document.getElementById('ayham1-sound');
+const newAppointmentSoundEl = document.getElementById('new-appointment-sound');
 const statusDropdownEl = document.getElementById('status-dropdown');
 const statusDropdownToggleEl = document.getElementById('status-dropdown-toggle');
 const statusDropdownPanelEl = document.getElementById('status-dropdown-panel');
@@ -605,14 +607,17 @@ function stopAlarmLoop() {
 const PING_REPEAT_COUNT = 3;
 let pingChainHandler = null;
 
-// Plays the ping sound PING_REPEAT_COUNT times back-to-back (chained off the
-// audio element's own "ended" event, so each play waits for the previous
+let pingChainAudio = null;
+
+// Plays a ping-style sound PING_REPEAT_COUNT times back-to-back (chained off
+// the audio element's own "ended" event, so each play waits for the previous
 // one to actually finish rather than overlapping). Used for every
 // non-urgent alert — 30/15-min heads-up, new-appointment ping, and both
-// their Settings test buttons.
-function playPingSound() {
+// their Settings test buttons. Defaults to ping.mp3; the new-appointment
+// alert passes whichever sound is picked in Settings.
+function playPingSound(sound = pingSound) {
   if (pingChainHandler) {
-    pingSound.removeEventListener('ended', pingChainHandler);
+    pingChainAudio.removeEventListener('ended', pingChainHandler);
     pingChainHandler = null;
   }
 
@@ -620,21 +625,22 @@ function playPingSound() {
 
   const playNext = () => {
     if (playsRemaining <= 0) {
-      pingSound.removeEventListener('ended', playNext);
+      sound.removeEventListener('ended', playNext);
       pingChainHandler = null;
       return;
     }
     playsRemaining--;
-    pingSound.currentTime = 0;
-    pingSound.play().catch((err) => {
+    sound.currentTime = 0;
+    sound.play().catch((err) => {
       console.error('Ping sound failed to play:', err);
-      pingSound.removeEventListener('ended', playNext);
+      sound.removeEventListener('ended', playNext);
       pingChainHandler = null;
     });
   };
 
   pingChainHandler = playNext;
-  pingSound.addEventListener('ended', playNext);
+  pingChainAudio = sound;
+  sound.addEventListener('ended', playNext);
   playNext();
 }
 
@@ -751,6 +757,25 @@ alarmDismissEl.addEventListener('click', () => {
 
 let knownEventIds = null;
 
+// Which sound the new-appointment alert plays (Settings → Sounds). Separate
+// from the 30/15-min heads-up ping, which always uses ping.mp3. "off" still
+// shows the banner, just silently. Persisted like the other settings so it
+// survives the board's self-reload.
+const NEW_APPOINTMENT_SOUNDS = { ping: pingSound, ayham1: ayham1Sound, off: null };
+let newAppointmentSound = localStorage.getItem('tradcal-new-appointment-sound');
+if (!(newAppointmentSound in NEW_APPOINTMENT_SOUNDS)) newAppointmentSound = 'ping';
+newAppointmentSoundEl.value = newAppointmentSound;
+
+newAppointmentSoundEl.addEventListener('change', () => {
+  newAppointmentSound = newAppointmentSoundEl.value;
+  localStorage.setItem('tradcal-new-appointment-sound', newAppointmentSound);
+});
+
+function playNewAppointmentSound() {
+  const sound = NEW_APPOINTMENT_SOUNDS[newAppointmentSound];
+  if (sound) playPingSound(sound);
+}
+
 function pingForNewAppointment(event) {
   const key = `new-${event.id}`;
   if (key === currentAlarmKey) return;
@@ -771,7 +796,7 @@ function pingForNewAppointment(event) {
   alarmBannerTitleEl.textContent = `🆕 New appointment today — ${event.subject}`;
   alarmBannerDetailsEl.textContent = details;
   bannerEl.classList.remove('hidden');
-  playPingSound();
+  playNewAppointmentSound();
 
   pingHideTimeoutId = setTimeout(() => {
     bannerEl.classList.add('hidden');
@@ -875,7 +900,7 @@ testNewAppointmentEl.addEventListener('click', () => {
   alarmBannerTitleEl.textContent = '🆕 New appointment today — Sample Appointment';
   alarmBannerDetailsEl.textContent = `${time}  ·  Test Location  ·  Triggered manually from Settings`;
   bannerEl.classList.remove('hidden');
-  playPingSound();
+  playNewAppointmentSound();
 
   pingHideTimeoutId = setTimeout(() => {
     bannerEl.classList.add('hidden');
