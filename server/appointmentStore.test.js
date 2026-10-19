@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { computeActiveAlarms } from './appointmentStore.js';
+import { computeActiveAlarms, replaceCachedEvents, getCachedEvents, markAlarmPlayed } from './appointmentStore.js';
 
 function eventStartingInMinutes(minutes, now) {
   return {
@@ -59,4 +59,57 @@ test('handles multiple events independently', () => {
     alarms.map((a) => a.thresholdMinutes).sort((a, b) => a - b),
     [5, 30]
   );
+});
+
+// The store is module-level state, so clear it first to keep flags from one
+// test leaking into the next.
+function resetStore(events) {
+  replaceCachedEvents([]);
+  replaceCachedEvents(events);
+}
+
+function playedFlags(eventId) {
+  return getCachedEvents().find((e) => e.id === eventId).played;
+}
+
+test('events start with no alarms played', () => {
+  resetStore([{ id: 'evt-1', start: '2026-10-19T15:00:00Z' }]);
+  assert.deepEqual(playedFlags('evt-1'), [false, false, false]);
+});
+
+test('marking an alarm played sets the flag for that threshold only', () => {
+  resetStore([{ id: 'evt-1', start: '2026-10-19T15:00:00Z' }]);
+  assert.equal(markAlarmPlayed('evt-1', 15), true);
+  assert.deepEqual(playedFlags('evt-1'), [false, true, false]);
+  markAlarmPlayed('evt-1', 5);
+  assert.deepEqual(playedFlags('evt-1'), [false, true, true]);
+});
+
+test('played flags survive a re-poll that returns the same event', () => {
+  resetStore([{ id: 'evt-1', start: '2026-10-19T15:00:00Z' }]);
+  markAlarmPlayed('evt-1', 30);
+  replaceCachedEvents([{ id: 'evt-1', start: '2026-10-19T15:00:00Z' }]);
+  assert.deepEqual(playedFlags('evt-1'), [true, false, false]);
+});
+
+test('rescheduling an event resets its played flags', () => {
+  resetStore([{ id: 'evt-1', start: '2026-10-19T15:00:00Z' }]);
+  markAlarmPlayed('evt-1', 30);
+  replaceCachedEvents([{ id: 'evt-1', start: '2026-10-19T16:00:00Z' }]);
+  assert.deepEqual(playedFlags('evt-1'), [false, false, false]);
+});
+
+test('played flags are dropped once an event leaves the list', () => {
+  resetStore([{ id: 'evt-1', start: '2026-10-19T15:00:00Z' }]);
+  markAlarmPlayed('evt-1', 30);
+  replaceCachedEvents([]);
+  replaceCachedEvents([{ id: 'evt-1', start: '2026-10-19T15:00:00Z' }]);
+  assert.deepEqual(playedFlags('evt-1'), [false, false, false]);
+});
+
+test('rejects unknown events and thresholds', () => {
+  resetStore([{ id: 'evt-1', start: '2026-10-19T15:00:00Z' }]);
+  assert.equal(markAlarmPlayed('nope', 30), false);
+  assert.equal(markAlarmPlayed('evt-1', 10), false);
+  assert.deepEqual(playedFlags('evt-1'), [false, false, false]);
 });

@@ -7,8 +7,38 @@ const ARCHIVE_BACKFILL_DAYS = 30;
 
 let cachedEvents = [];
 
+// Per-event record of which alarms (indexed like ALARM_THRESHOLDS_MINUTES:
+// [30, 15, 5]) a display has already played a sound for. Kept server-side so
+// it survives the kiosk's periodic page reload — otherwise a reload inside an
+// alarm's one-minute window replays the same alarm. Keyed by event id, with
+// the start time it was recorded against: if the appointment is rescheduled,
+// its flags reset so the alarms fire again for the new time.
+const playedAlarms = new Map();
+
+function emptyPlayedFlags() {
+  return ALARM_THRESHOLDS_MINUTES.map(() => false);
+}
+
+function playedFlagsFor(event) {
+  const entry = playedAlarms.get(event.id);
+  return entry && entry.start === event.start ? entry.flags : emptyPlayedFlags();
+}
+
 export function getCachedEvents() {
-  return cachedEvents;
+  return cachedEvents.map((event) => ({ ...event, played: [...playedFlagsFor(event)] }));
+}
+
+// Returns false if the event or threshold is unknown, so the endpoint can
+// reject it rather than silently storing junk.
+export function markAlarmPlayed(eventId, thresholdMinutes) {
+  const index = ALARM_THRESHOLDS_MINUTES.indexOf(thresholdMinutes);
+  const event = cachedEvents.find((e) => e.id === eventId);
+  if (index === -1 || !event) return false;
+
+  const flags = playedFlagsFor(event);
+  flags[index] = true;
+  playedAlarms.set(event.id, { start: event.start, flags });
+  return true;
 }
 
 // An event tagged with the "Tech Out" category (technician unavailable)
@@ -55,6 +85,18 @@ export async function refreshEvents() {
     (event) => !freshIds.has(event.id) && new Date(event.end) <= now
   );
   updateArchive(agedOut, now);
+
+  return replaceCachedEvents(freshEvents);
+}
+
+// Swaps in a fresh event list, dropping played-alarm flags for events that
+// are no longer on it. Split out from refreshEvents() so it's testable
+// without Graph or touching the archive file.
+export function replaceCachedEvents(freshEvents) {
+  const freshIds = new Set(freshEvents.map((event) => event.id));
+  for (const id of playedAlarms.keys()) {
+    if (!freshIds.has(id)) playedAlarms.delete(id);
+  }
 
   cachedEvents = freshEvents;
   return cachedEvents;
