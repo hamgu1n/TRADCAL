@@ -58,7 +58,7 @@ test('displayPerson shows remaining attendees once the placeholder is stripped',
 test('getStatusAndTechnician identifies the technician by roster-matched category, not attendance', () => {
   const roster = ['Matt'];
   const result = getStatusAndTechnician(['Completed', 'Matt'], roster);
-  assert.deepEqual(result, { status: 'Completed', technician: 'Matt' });
+  assert.deepEqual(result, { status: 'Completed', technicians: ['Matt'], technician: 'Matt' });
 });
 
 test('getStatusAndTechnician matches roster names case-insensitively', () => {
@@ -68,17 +68,17 @@ test('getStatusAndTechnician matches roster names case-insensitively', () => {
 
 test('getStatusAndTechnician defaults status to "Scheduled" when only a technician category is present', () => {
   const result = getStatusAndTechnician(['Matt'], ['Matt']);
-  assert.deepEqual(result, { status: 'Scheduled', technician: 'Matt' });
+  assert.deepEqual(result, { status: 'Scheduled', technicians: ['Matt'], technician: 'Matt' });
 });
 
 test('getStatusAndTechnician defaults technician to "-" when no category matches the roster', () => {
   const result = getStatusAndTechnician(['Completed'], ['Matt']);
-  assert.deepEqual(result, { status: 'Completed', technician: '-' });
+  assert.deepEqual(result, { status: 'Completed', technicians: [], technician: '-' });
 });
 
 test('getStatusAndTechnician handles an empty/missing categories list', () => {
-  assert.deepEqual(getStatusAndTechnician([], ['Matt']), { status: 'Scheduled', technician: '-' });
-  assert.deepEqual(getStatusAndTechnician(undefined, ['Matt']), { status: 'Scheduled', technician: '-' });
+  assert.deepEqual(getStatusAndTechnician([], ['Matt']), { status: 'Scheduled', technicians: [], technician: '-' });
+  assert.deepEqual(getStatusAndTechnician(undefined, ['Matt']), { status: 'Scheduled', technicians: [], technician: '-' });
 });
 
 test('matchesSearch matches subject or location, case-insensitively', () => {
@@ -158,6 +158,26 @@ test('filterEvents applies the technician filter against roster-matched categori
     technicianRoster: ['Matt', 'Mary'],
   });
   assert.deepEqual(result.map((e) => e.id), ['b']);
+});
+
+test('getStatusAndTechnician returns every roster-matched category when several technicians are assigned', () => {
+  const result = getStatusAndTechnician(['Matt', 'In Progress', 'Mary'], ['Matt', 'Mary']);
+  assert.deepEqual(result, { status: 'In Progress', technicians: ['Matt', 'Mary'], technician: 'Matt, Mary' });
+});
+
+test('filterEvents technician filter matches an event assigned to several technicians', () => {
+  const now = new Date('2026-07-14T09:00:00Z');
+  const events = [
+    makeEvent({ id: 'both', categories: ['Scheduled', 'Matt', 'Mary'] }),
+    makeEvent({ id: 'matt', categories: ['Scheduled', 'Matt'] }),
+  ];
+
+  const result = filterEvents(events, {
+    now,
+    technicianFilter: 'mary', // case-insensitive, same as roster matching
+    technicianRoster: ['Matt', 'Mary'],
+  });
+  assert.deepEqual(result.map((e) => e.id), ['both']);
 });
 
 test('sortByStart orders chronologically without mutating the input', () => {

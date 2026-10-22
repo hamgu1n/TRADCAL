@@ -471,7 +471,7 @@ function renderEvents(events) {
   for (const event of sorted) {
     const start = new Date(event.start);
     const end = new Date(event.end);
-    const { status, technician } = getStatusAndTechnician(event.categories, technicians);
+    const { status, technicians: assignedTechnicians } = getStatusAndTechnician(event.categories, technicians);
     const person = displayPerson(event.person);
     const completed = isCompletedStatus(status);
     const isOngoing = start <= now && now < end;
@@ -512,13 +512,22 @@ function renderEvents(events) {
       <td>${escapeHtml(event.subject)}</td>
       <td>${escapeHtml(event.location)}</td>
       <td class="person-column"><span class="person-text${expandedPersonIds.has(event.id) ? ' expanded' : ''}" data-event-id="${escapeHtml(event.id)}" title="${escapeHtml(person)}">${escapeHtml(person)}</span></td>
-      <td class="technician-column"><span class="technician-text">${escapeHtml(technician)}</span></td>
-      <td><span class="status-badge ${statusColorClass(status)}">${escapeHtml(status)}</span></td>
+      <td class="technician-column">${technicianChipsHtml(assignedTechnicians)}</td>
+      <td class="status-column"><span class="status-badge ${statusColorClass(status)}">${escapeHtml(status)}</span></td>
     `;
     bodyEl.appendChild(row);
   }
 
   markTruncatedPersonCells();
+}
+
+// One chip per assigned technician (an event can carry several technician
+// categories), wrapping onto extra lines rather than truncating — unlike the
+// Person column, every name here matters at a glance.
+function technicianChipsHtml(assigned) {
+  if (assigned.length === 0) return '<span class="unassigned">—</span>';
+  const chips = assigned.map((name) => `<span class="technician-chip">${escapeHtml(name)}</span>`).join('');
+  return `<span class="technician-chips">${chips}</span>`;
 }
 
 // A cell is only worth clicking if the text actually overflows, which can't be
@@ -1390,14 +1399,14 @@ function renderHistory(records) {
   const rows = sorted
     .map((r) => {
       const person = displayPerson(r.person);
-      const { status, technician } = getStatusAndTechnician(r.categories, technicians);
+      const { status, technicians: assignedTechnicians } = getStatusAndTechnician(r.categories, technicians);
       return `
         <tr>
           <td>${escapeHtml(new Date(r.end).toLocaleDateString())}</td>
           <td>${escapeHtml(r.subject)}</td>
           <td>${escapeHtml(r.location)}</td>
           <td>${escapeHtml(person)}</td>
-          <td class="technician-column"><span class="technician-text">${escapeHtml(technician)}</span></td>
+          <td class="technician-column">${technicianChipsHtml(assignedTechnicians)}</td>
           <td><span class="status-badge ${statusColorClass(status)}">${escapeHtml(status)}</span></td>
         </tr>
       `;
