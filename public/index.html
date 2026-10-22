@@ -49,7 +49,7 @@
         <div class="dropdown-panel hidden" id="status-dropdown-panel"></div>
       </div>
       <span class="filter-field">
-        <label for="person-filter-input">Users:</label>
+        <label for="person-filter-input">Person</label>
         <span class="combobox" id="person-combobox">
           <input
             type="text"
@@ -61,24 +61,19 @@
             aria-autocomplete="list"
             aria-controls="person-filter-list"
           />
-          <button type="button" id="person-filter-clear" class="combobox-clear hidden" aria-label="Clear user filter">×</button>
+          <button type="button" id="person-filter-clear" class="combobox-clear hidden" aria-label="Clear person filter">×</button>
           <ul class="combobox-list hidden" id="person-filter-list" role="listbox"></ul>
         </span>
       </span>
-      <label>
-        Technician:
+      <span class="filter-field">
+        <label for="technician-filter">Technician</label>
         <select id="technician-filter"><option value="all">All</option></select>
-      </label>
-      <label>
-        <input type="search" id="search-input" placeholder="Search title or location…" />
-      </label>
+      </span>
+      <input type="search" id="search-input" placeholder="Search title or location…" aria-label="Search title or location" />
     </div>
 
-    <div class="bar-divider" aria-hidden="true"></div>
-
     <div class="bar-section" id="settings-section">
-      <span class="bar-section-label">Settings</span>
-      <button type="button" class="dropdown-toggle icon-toggle" id="settings-toggle" aria-label="Settings">⚙</button>
+      <button type="button" class="dropdown-toggle icon-toggle" id="settings-toggle" aria-label="Settings" title="Settings">⚙</button>
     </div>
   </div>
 
@@ -157,7 +152,7 @@
           <th>Location</th>
           <th>Person</th>
           <th class="technician-column">Technician</th>
-          <th>Status</th>
+          <th class="status-column">Status</th>
         </tr>
       </thead>
       <tbody id="appointments-body"></tbody>

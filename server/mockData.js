@@ -3,8 +3,8 @@
 // actually fire while testing the kiosk display.
 //
 // "person" is the requester (an attendee); "categories" holds both the
-// status (e.g. "Completed") and the assigned technician, identified by a
-// category matching a first name on the technician roster in Settings —
+// status (e.g. "Completed") and the assigned technician(s), identified by
+// categories matching first names on the technician roster in Settings —
 // technicians are no longer attendees on the event.
 export function generateMockEvents(now = new Date()) {
   const minutesFromNow = (mins) => new Date(now.getTime() + mins * 60_000).toISOString();
@@ -28,7 +28,8 @@ export function generateMockEvents(now = new Date()) {
       // Multi-attendee on purpose: exercises the Person column's
       // truncate-and-click-to-expand behavior in the kiosk UI.
       person: 'Chen, Amy / Whitfield, Gregory / Santos-Marin, Alejandra',
-      categories: ['Computer Lab Work', 'Jordan'],
+      // Two technician categories: exercises multi-technician assignment.
+      categories: ['Computer Lab Work', 'Jordan', 'Alex'],
     },
     {
       id: 'mock-3',

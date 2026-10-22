@@ -60,20 +60,29 @@ function isRosterMatch(category, technicianRoster) {
 }
 
 // Outlook categories on the event double as both the status (e.g.
-// "Completed", "In Progress") and the assigned technician — a technician
+// "Completed", "In Progress") and the assigned technicians — a technician
 // is identified by tagging the event with a category matching their first
-// name on the roster (Settings), not by being an attendee. Whichever
-// category matches the roster is the technician; the remaining category
-// (if any) is the status.
+// name on the roster (Settings), not by being an attendee. An event can be
+// tagged with several technician categories to assign more than one person.
+// Every category that matches the roster is a technician; the first
+// remaining category (if any) is the status.
 export function getStatusAndTechnician(categories, technicianRoster = []) {
   const list = (Array.isArray(categories) ? categories : []).filter(Boolean);
-  const technicianCategory = list.find((c) => isRosterMatch(c, technicianRoster));
-  const statusCategory = list.find((c) => c !== technicianCategory);
+  const technicians = list.filter((c) => isRosterMatch(c, technicianRoster));
+  const statusCategory = list.find((c) => !technicians.includes(c));
 
   return {
     status: statusCategory ?? 'Scheduled',
-    technician: technicianCategory ?? '-',
+    technicians,
+    // Roster entries are first names (no commas), so a plain ", " join is
+    // unambiguous here — unlike the "Last, First" attendee names above.
+    technician: technicians.length > 0 ? technicians.join(', ') : '-',
   };
+}
+
+export function hasTechnician(technicians, name) {
+  const normalized = (name ?? '').trim().toLowerCase();
+  return technicians.some((tech) => tech.trim().toLowerCase() === normalized);
 }
 
 export function matchesSearch(event, searchText) {
@@ -111,7 +120,7 @@ export function filterEvents(
   return events.filter((event) => {
     const start = new Date(event.start);
     const end = new Date(event.end);
-    const { status, technician } = getStatusAndTechnician(event.categories, technicianRoster);
+    const { status, technicians } = getStatusAndTechnician(event.categories, technicianRoster);
     const completed = isCompletedStatus(status);
     const isPastDue = end <= now;
 
@@ -122,7 +131,7 @@ export function filterEvents(
 
     const person = displayPerson(event.person);
     if (personFilter !== 'all' && person !== personFilter) return false;
-    if (technicianFilter !== 'all' && technician !== technicianFilter) return false;
+    if (technicianFilter !== 'all' && !hasTechnician(technicians, technicianFilter)) return false;
     if (!matchesSearch(event, searchText)) return false;
 
     return true;

@@ -59,10 +59,12 @@ before each appointment starts.
   - `public/logic.js` — pure filtering/status/display logic with no DOM
     dependency, so it's unit-testable under Node (`logic.test.js`) instead of
     only being exercisable by hand in a browser. Includes
-    `splitPersonAndTechnician()`, which partitions an event's attendee names
-    into the **Person** column (the requester) and **Technician** column
-    (whoever matches the roster) — an attendee is only "Person" if they're
-    neither the shared-mailbox placeholder nor on the technician roster.
+    `getStatusAndTechnician()`: Outlook categories hold both the status and
+    the assigned technician(s) — every category matching a roster first name
+    is a technician (an event can be tagged with several to assign more than
+    one), and the first remaining category is the status. The board shows
+    one chip per technician, and the Technician filter matches an event if
+    *any* of its technicians matches.
   - The board shows only near-term appointments (`NEAR_TERM_HOURS`, 4h) by
     default even though the server fetches much further ahead — Settings →
     "Show future appointments" removes that cutoff to reveal the rest of the
